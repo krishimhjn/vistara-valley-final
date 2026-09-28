@@ -1,6 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import "./Hero.css";
 
 export default function Hero() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
+
   return (
     <section className="hero" id="home">
       <div className="hero-background" aria-hidden="true" />
@@ -8,7 +17,7 @@ export default function Hero() {
       <div className="hero-overlay" />
 
       <header className="hero-navbar">
-        <a href="#home" className="hero-logo">
+        <a href="#home" className="hero-logo" onClick={closeMenu}>
           <img
             src="/images/logo.png"
             alt="Vistara Valley"
@@ -29,15 +38,51 @@ export default function Hero() {
         </a>
 
         <button
-          className="hero-menu-button"
+          className={`hero-menu-button ${menuOpen ? "is-open" : ""}`}
           type="button"
-          aria-label="Open navigation menu"
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
         >
           <span />
           <span />
           <span />
         </button>
       </header>
+
+      <div className={`hero-mobile-menu ${menuOpen ? "is-open" : ""}`}>
+        <a href="#about" onClick={closeMenu}>
+          About
+        </a>
+
+        <a href="#amenities" onClick={closeMenu}>
+          Amenities
+        </a>
+
+        <a href="#master-plan" onClick={closeMenu}>
+          Master Plan
+        </a>
+
+        <a href="#location" onClick={closeMenu}>
+          Location
+        </a>
+
+        <a href="#gallery" onClick={closeMenu}>
+          Gallery
+        </a>
+
+        <a href="#contact" onClick={closeMenu}>
+          Contact
+        </a>
+
+        <a
+          href="#contact"
+          className="hero-mobile-menu-cta"
+          onClick={closeMenu}
+        >
+          Book a Site Visit ↗
+        </a>
+      </div>
 
       <div className="hero-content">
         <p className="hero-label">
