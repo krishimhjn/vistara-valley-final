@@ -16,6 +16,7 @@ export default function Hero() {
 
       <div className="hero-overlay" />
 
+      {/* NAVBAR */}
       <header className="hero-navbar">
         <a href="#home" className="hero-logo" onClick={closeMenu}>
           <img
@@ -40,7 +41,9 @@ export default function Hero() {
         <button
           className={`hero-menu-button ${menuOpen ? "is-open" : ""}`}
           type="button"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            menuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(!menuOpen)}
         >
@@ -50,6 +53,7 @@ export default function Hero() {
         </button>
       </header>
 
+      {/* MOBILE MENU */}
       <div className={`hero-mobile-menu ${menuOpen ? "is-open" : ""}`}>
         <a href="#about" onClick={closeMenu}>
           About
@@ -84,46 +88,77 @@ export default function Hero() {
         </a>
       </div>
 
+      {/* HERO CONTENT */}
       <div className="hero-content">
         <p className="hero-label">
           Premium Residential &amp; Commercial Plots
         </p>
 
-        <h1>Life in the city</h1>
+        <h1>
+          Life in the city
+        </h1>
 
         <p className="hero-description">
-          Discover Vistara Valley, a premium residential and commercial
-          plotted development on Khandwa Road, Khargone, designed for
-          modern living, business opportunities and a well-connected
-          lifestyle.
+          A thoughtfully planned community where modern living meets
+          nature — giving you the perfect balance of comfort,
+          convenience and calm.
         </p>
 
-        <a href="#contact" className="hero-primary-button">
-          Book a Site Visit
-          <span aria-hidden="true">↗</span>
+        <a href="#about" className="hero-primary-button">
+          <span>Explore the Project</span>
+          <strong aria-hidden="true">→</strong>
         </a>
       </div>
 
-      <div className="hero-trust">
-        <div>
-          <strong>RERA</strong>
-          <span>Approved</span>
+      {/* FLOATING INFORMATION CARD */}
+      <div className="hero-info-card">
+
+        <div className="hero-info-item">
+          <div className="hero-info-icon">
+            <span className="hero-icon-grid" />
+          </div>
+
+          <div className="hero-info-text">
+            <span>Total Plots</span>
+            <strong>220+</strong>
+          </div>
         </div>
 
-        <div>
-          <strong>TNCP</strong>
-          <span>Approved</span>
+        <div className="hero-info-item">
+          <div className="hero-info-icon">
+            <span className="hero-icon-expand" />
+          </div>
+
+          <div className="hero-info-text">
+            <span>Plot Mix</span>
+            <strong>190+ Residential</strong>
+            <small>30+ Commercial</small>
+          </div>
         </div>
 
-        <div>
-          <strong>KHANDWA ROAD</strong>
-          <span>Khargone</span>
-        </div>
-      </div>
+        <div className="hero-info-item">
+          <div className="hero-info-icon">
+            <span className="hero-icon-road" />
+          </div>
 
-      <div className="hero-scroll" aria-hidden="true">
-        <span>Scroll</span>
-        <span className="hero-scroll-line" />
+          <div className="hero-info-text">
+            <span>Internal Roads</span>
+            <strong>30 ft, 40 ft &amp; up to 70 ft</strong>
+          </div>
+        </div>
+
+        <div className="hero-info-item">
+          <div className="hero-info-icon">
+            <span className="hero-icon-check" />
+          </div>
+
+          <div className="hero-info-text">
+            <span>Approvals</span>
+            <strong>RERA Approved</strong>
+            <small>TNCP Approved</small>
+          </div>
+        </div>
+
       </div>
     </section>
   );
