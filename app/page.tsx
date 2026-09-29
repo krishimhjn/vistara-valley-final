@@ -10,9 +10,10 @@ export default function Home() {
     <main>
       <Hero />
       <ProjectIntro />
+      <Gallery />
       <Amenities />
       <MasterLocation />
-      <Gallery />
+      
       <Contact />
     </main>
   );
