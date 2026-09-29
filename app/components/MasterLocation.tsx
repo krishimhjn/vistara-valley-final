@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import "./MasterLocation.css";
 
 export default function MasterLocation() {
+  const [masterPlanOpen, setMasterPlanOpen] = useState(false);
+
   return (
     <section className="master-location" id="master-plan">
       <div className="master-location-container">
@@ -26,26 +31,33 @@ export default function MasterLocation() {
               and a harmonious layout for a premium living experience.
             </p>
 
-            <a
-              href="#master-plan-image"
+            <button
+              type="button"
               className="master-location-button"
+              onClick={() => setMasterPlanOpen(true)}
             >
               <span>View Master Plan</span>
               <strong>→</strong>
-            </a>
+            </button>
           </div>
 
-          <div
-            className="master-location-visual"
-            id="master-plan-image"
+          {/* MASTER PLAN IMAGE */}
+          <button
+            type="button"
+            className="master-location-visual master-plan-visual"
+            onClick={() => setMasterPlanOpen(true)}
+            aria-label="Open Vistara Valley master plan"
           >
             <img
               src="/images/master-plan.jpg"
               alt="Vistara Valley master plan"
             />
-          </div>
-        </article>
 
+            <span className="master-plan-view-label">
+              Click to view
+            </span>
+          </button>
+        </article>
 
         {/* =========================
             LOCATION
@@ -97,6 +109,32 @@ export default function MasterLocation() {
         </article>
 
       </div>
+
+      {/* =========================
+          MASTER PLAN FULLSCREEN
+      ========================= */}
+
+      {masterPlanOpen && (
+        <div
+          className="master-plan-lightbox"
+          onClick={() => setMasterPlanOpen(false)}
+        >
+          <button
+            type="button"
+            className="master-plan-close"
+            onClick={() => setMasterPlanOpen(false)}
+            aria-label="Close master plan"
+          >
+            ×
+          </button>
+
+          <img
+            src="/images/master-plan.jpg"
+            alt="Vistara Valley master plan enlarged"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   );
 }
