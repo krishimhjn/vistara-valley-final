@@ -41,10 +41,7 @@ export default function ProjectIntro() {
             className="project-intro-card"
           >
             <div className="project-intro-card-image">
-              <img
-                src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85"
-                alt="Residential plots at Vistara Valley"
-              />
+              <img src="/images/modern_villa_HD.jpg" alt="Modern Villa" />
             </div>
 
             <div className="project-intro-card-info">
