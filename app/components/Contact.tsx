@@ -3,6 +3,39 @@
 import "./Contact.css";
 
 export default function Contact() {
+  const handleSubmit = (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
+    const interest = String(formData.get("interest") || "").trim();
+    const message = String(formData.get("message") || "").trim();
+
+    const whatsappMessage = `New Vistara Valley Site Visit Enquiry
+
+Name: ${name}
+Phone: ${phone}
+Interested In: ${interest}
+Message: ${message || "No additional message"}
+
+Project: Vistara Valley
+Location: Khandwa Road, Khargone`;
+
+    const whatsappUrl = `https://wa.me/919977048537?text=${encodeURIComponent(
+      whatsappMessage
+    )}`;
+
+    window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
   return (
     <section className="contact" id="contact">
       <div className="contact-container">
@@ -58,15 +91,7 @@ export default function Contact() {
               </h3>
             </div>
 
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-
-                alert(
-                  "Thank you. We will contact you shortly."
-                );
-              }}
-            >
+            <form onSubmit={handleSubmit}>
 
               {/* NAME + PHONE */}
               <div className="contact-form-row">
@@ -81,6 +106,7 @@ export default function Contact() {
                     name="name"
                     type="text"
                     placeholder="Enter your name"
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -95,6 +121,7 @@ export default function Contact() {
                     name="phone"
                     type="tel"
                     placeholder="Enter your phone number"
+                    autoComplete="tel"
                     required
                   />
                 </div>
@@ -121,15 +148,15 @@ export default function Contact() {
                     Select an option
                   </option>
 
-                  <option value="residential">
+                  <option value="Residential Plots">
                     Residential Plots
                   </option>
 
-                  <option value="commercial">
+                  <option value="Commercial Plots">
                     Commercial Plots
                   </option>
 
-                  <option value="both">
+                  <option value="Residential & Commercial">
                     Residential & Commercial
                   </option>
                 </select>
