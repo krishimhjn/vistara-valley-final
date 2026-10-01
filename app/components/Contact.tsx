@@ -7,11 +7,10 @@ export default function Contact() {
     <section className="contact" id="contact">
       <div className="contact-container">
 
-        {/* =========================
-            MAIN CTA
-        ========================= */}
-
+        {/* MAIN CONTACT AREA */}
         <div className="contact-main">
+
+          {/* LEFT CONTENT */}
           <div className="contact-heading">
             <p className="contact-label">
               BOOK A SITE VISIT
@@ -30,7 +29,7 @@ export default function Contact() {
             </p>
 
             <a
-              href="https://wa.me/91XXXXXXXXXX"
+              href="https://wa.me/919977048537"
               target="_blank"
               rel="noopener noreferrer"
               className="contact-whatsapp"
@@ -38,25 +37,40 @@ export default function Contact() {
               <span>Chat on WhatsApp</span>
               <strong>↗</strong>
             </a>
+
+            <a
+              href="tel:+919977048537"
+              className="contact-phone"
+            >
+              <span>Call +91 99770 48537</span>
+              <strong>↗</strong>
+            </a>
           </div>
 
-          {/* =========================
-              ENQUIRY FORM
-          ========================= */}
-
+          {/* FORM CARD */}
           <div className="contact-form-card">
+
             <div className="contact-form-header">
               <span>GET IN TOUCH</span>
-              <h3>Plan Your Visit</h3>
+
+              <h3>
+                Plan Your Visit
+              </h3>
             </div>
 
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                alert("Thank you. We will contact you shortly.");
+
+                alert(
+                  "Thank you. We will contact you shortly."
+                );
               }}
             >
+
+              {/* NAME + PHONE */}
               <div className="contact-form-row">
+
                 <div className="contact-field">
                   <label htmlFor="name">
                     Your Name
@@ -84,9 +98,12 @@ export default function Contact() {
                     required
                   />
                 </div>
+
               </div>
 
+              {/* INTEREST */}
               <div className="contact-field">
+
                 <label htmlFor="interest">
                   I&apos;m Interested In
                 </label>
@@ -97,7 +114,10 @@ export default function Contact() {
                   defaultValue=""
                   required
                 >
-                  <option value="" disabled>
+                  <option
+                    value=""
+                    disabled
+                  >
                     Select an option
                   </option>
 
@@ -113,9 +133,12 @@ export default function Contact() {
                     Residential & Commercial
                   </option>
                 </select>
+
               </div>
 
+              {/* MESSAGE */}
               <div className="contact-field">
+
                 <label htmlFor="message">
                   Message
                 </label>
@@ -126,26 +149,34 @@ export default function Contact() {
                   rows={3}
                   placeholder="Tell us how we can help"
                 />
+
               </div>
 
+              {/* SUBMIT */}
               <button
                 type="submit"
                 className="contact-submit"
               >
-                <span>Request a Site Visit</span>
-                <strong>→</strong>
+                <span>
+                  Request a Site Visit
+                </span>
+
+                <strong>
+                  →
+                </strong>
               </button>
+
             </form>
           </div>
+
         </div>
 
-        {/* =========================
-            FOOTER
-        ========================= */}
-
+        {/* FOOTER */}
         <footer className="contact-footer">
 
+          {/* BRAND */}
           <div className="contact-footer-brand">
+
             <img
               src="/images/logo.png"
               alt="Vistara Valley"
@@ -156,29 +187,68 @@ export default function Contact() {
               <br />
               on Khandwa Road, Khargone.
             </p>
+
           </div>
 
+          {/* FOOTER LINKS */}
           <div className="contact-footer-links">
-            <div>
-              <span>EXPLORE</span>
 
-              <a href="#about">About</a>
-              <a href="#amenities">Amenities</a>
-              <a href="#master-plan">Master Plan</a>
-              <a href="#gallery">Gallery</a>
+            <div>
+              <span>
+                EXPLORE
+              </span>
+
+              <a href="#about">
+                About
+              </a>
+
+              <a href="#amenities">
+                Amenities
+              </a>
+
+              <a href="#master-plan">
+                Master Plan
+              </a>
+
+              <a href="#gallery">
+                Gallery
+              </a>
             </div>
 
             <div>
-              <span>CONNECT</span>
+              <span>
+                CONNECT
+              </span>
 
-              <a href="#location">Location</a>
-              <a href="#contact">Contact</a>
-              <a href="#contact">Book a Site Visit</a>
+              <a href="#location">
+                Location
+              </a>
+
+              <a href="#contact">
+                Contact
+              </a>
+
+              <a href="#contact">
+                Book a Site Visit
+              </a>
+
+              <a
+                href="https://wa.me/919977048537"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp
+              </a>
             </div>
+
           </div>
 
+          {/* LOCATION + CONTACT */}
           <div className="contact-footer-location">
-            <span>LOCATION</span>
+
+            <span>
+              LOCATION
+            </span>
 
             <p>
               Khandwa Road,
@@ -193,18 +263,55 @@ export default function Contact() {
             >
               Get Directions ↗
             </a>
+
+            <a
+              href="tel:+919977048537"
+              className="contact-footer-phone"
+            >
+              +91 99770 48537
+            </a>
+
           </div>
 
         </footer>
 
+        {/* APPROVAL INFORMATION */}
+        <div className="contact-approvals">
+
+          <div className="contact-approval-item">
+            <span>
+              TNCP APPROVAL
+            </span>
+
+            <strong>
+              KRNLP18112508258
+            </strong>
+          </div>
+
+          <div className="contact-approval-item">
+            <span>
+              RERA REGISTRATION
+            </span>
+
+            <strong>
+              Details to be updated
+            </strong>
+          </div>
+
+        </div>
+
+        {/* BOTTOM BAR */}
         <div className="contact-bottom">
+
           <span>
-            © {new Date().getFullYear()} Vistara Valley. All rights reserved.
+            © {new Date().getFullYear()} Vistara Valley.
+            All rights reserved.
           </span>
 
           <span>
             Designed for better living.
           </span>
+
         </div>
 
       </div>
