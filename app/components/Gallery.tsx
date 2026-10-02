@@ -18,7 +18,6 @@ type Category = {
 };
 
 const IMG = "/images";
-const AUTOPLAY_MS = 5500;
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -106,18 +105,6 @@ const Expand = () => (
   </svg>
 );
 
-const Play = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
-    <path d="M8 5.5v13l11-6.5z" />
-  </svg>
-);
-
-const Pause = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
-    <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
-  </svg>
-);
-
 const Close = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
     <path d="M5 5l14 14M19 5L5 19" />
@@ -128,20 +115,15 @@ export default function Gallery() {
   const [activeTab, setActiveTab] = useState(0);
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
-  const [autoplay, setAutoplay] = useState(true);
-  const [hovered, setHovered] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
 
   const touchStartX = useRef<number | null>(null);
-  const thumbsRef = useRef<HTMLDivElement | null>(null);
-  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const panelsRef = useRef<HTMLDivElement | null>(null);
+  const panelRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const category = categories[activeTab];
   const slides = category.slides;
   const slide = slides[index];
   const total = slides.length;
-
-  const running = autoplay && !hovered && !lightbox && !reduceMotion && total > 1;
 
   const goTo = useCallback(
     (next: number) => {
@@ -159,36 +141,14 @@ export default function Gallery() {
     setIndex(0);
   };
 
-  /* respect the visitor's reduced-motion setting */
+  /* on phones the panels scroll sideways, so keep the open one centred */
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(query.matches);
-
-    const onChange = (event: MediaQueryListEvent) => setReduceMotion(event.matches);
-    query.addEventListener("change", onChange);
-
-    return () => query.removeEventListener("change", onChange);
-  }, []);
-
-  /* gentle auto-play */
-  useEffect(() => {
-    if (!running) return;
-
-    const timer = setTimeout(() => {
-      setIndex((current) => (current + 1) % categories[activeTab].slides.length);
-    }, AUTOPLAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [running, index, activeTab]);
-
-  /* keep the active thumbnail centred without scrolling the page */
-  useEffect(() => {
-    const container = thumbsRef.current;
-    const thumb = thumbRefs.current[index];
-    if (!container || !thumb) return;
+    const container = panelsRef.current;
+    const panel = panelRefs.current[index];
+    if (!container || !panel) return;
 
     container.scrollTo({
-      left: thumb.offsetLeft - (container.clientWidth - thumb.clientWidth) / 2,
+      left: panel.offsetLeft - (container.clientWidth - panel.clientWidth) / 2,
       behavior: "smooth",
     });
   }, [index, activeTab]);
@@ -212,7 +172,7 @@ export default function Gallery() {
     };
   }, [lightbox, showPrevious, showNext]);
 
-  /* swipe support */
+  /* swipe support (lightbox only, panels use native scrolling on phones) */
   const onTouchStart = (event: React.TouchEvent) => {
     touchStartX.current = event.touches[0].clientX;
   };
@@ -228,9 +188,10 @@ export default function Gallery() {
     else showNext();
   };
 
-  const onStageKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "ArrowLeft") showPrevious();
-    if (event.key === "ArrowRight") showNext();
+  /* click a closed panel to open it, click the open one for fullscreen */
+  const onPanelClick = (panelIndex: number) => {
+    if (panelIndex === index) setLightbox(true);
+    else setIndex(panelIndex);
   };
 
   return (
@@ -278,74 +239,65 @@ export default function Gallery() {
           ))}
         </div>
 
-        {/* SLIDER */}
+        {/* EXPANDING PANELS */}
 
         <div
-          className="gallery-slider"
           role="tabpanel"
           id={`gallery-panel-${category.id}`}
           aria-labelledby={`gallery-tab-${category.id}`}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
         >
-          <p className="gallery-tagline" key={category.id}>
-            {category.tagline}
-          </p>
+          <div className="gallery-panels" ref={panelsRef}>
+            {slides.map((item, panelIndex) => {
+              const isOpen = panelIndex === index;
 
-          <div
-            className="gallery-stage"
-            tabIndex={0}
-            onKeyDown={onStageKeyDown}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-          >
-            <div className="gallery-slide" key={`${category.id}-${index}`}>
-              <Image
-                src={slide.src}
-                alt={slide.alt}
-                fill
-                sizes="(max-width: 760px) 100vw, (max-width: 1280px) 92vw, 1240px"
-                priority={activeTab === 0 && index === 0}
-                className="gallery-slide-image"
-              />
-            </div>
+              return (
+                <button
+                  key={`${category.id}-${item.src}`}
+                  type="button"
+                  ref={(element) => {
+                    panelRefs.current[panelIndex] = element;
+                  }}
+                  className={`gallery-panel ${isOpen ? "is-open" : ""}`}
+                  onClick={() => onPanelClick(panelIndex)}
+                  aria-current={isOpen}
+                  aria-label={
+                    isOpen
+                      ? `${item.caption} – open fullscreen`
+                      : `Show ${item.caption}`
+                  }
+                >
+                  <Image
+                    src={item.src}
+                    alt={item.alt}
+                    fill
+                    sizes="(max-width: 760px) 80vw, 900px"
+                    priority={activeTab === 0 && panelIndex === 0}
+                    className="gallery-panel-image"
+                  />
 
-            <button
-              type="button"
-              className="gallery-open"
-              onClick={() => setLightbox(true)}
-              aria-label="Open image fullscreen"
-            />
+                  <span className="gallery-panel-number">
+                    {pad(panelIndex + 1)}
+                  </span>
+
+                  <span className="gallery-panel-caption">
+                    <span className="gallery-caption-eyebrow">
+                      {category.label} — {pad(panelIndex + 1)}
+                    </span>
+                    <span className="gallery-caption-title">{item.caption}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="gallery-progress" aria-hidden="true">
-            <span
-              key={`${activeTab}-${index}-${running}`}
-              className={`gallery-progress-bar ${running ? "is-running" : ""}`}
-              style={{ animationDuration: `${AUTOPLAY_MS}ms` }}
-            />
-          </div>
-
-          {/* CAPTION + CONTROLS */}
+          {/* CONTROLS */}
 
           <div className="gallery-bar">
-            <div className="gallery-caption" aria-live="polite">
-              <span className="gallery-caption-eyebrow">
-                {category.label} — {pad(index + 1)}
-              </span>
-              <span className="gallery-caption-title">{slide.caption}</span>
-            </div>
+            <p className="gallery-tagline" key={category.id}>
+              {category.tagline}
+            </p>
 
             <div className="gallery-controls">
-              <button
-                type="button"
-                className="gallery-control gallery-control-small"
-                onClick={() => setAutoplay((value) => !value)}
-                aria-label={autoplay ? "Pause slideshow" : "Play slideshow"}
-              >
-                {autoplay ? <Pause /> : <Play />}
-              </button>
-
               <button
                 type="button"
                 className="gallery-control"
@@ -355,7 +307,7 @@ export default function Gallery() {
                 <ArrowLeft />
               </button>
 
-              <span className="gallery-count">
+              <span className="gallery-count" aria-live="polite">
                 <strong>{pad(index + 1)}</strong>
                 <i />
                 {pad(total)}
@@ -379,32 +331,6 @@ export default function Gallery() {
                 <Expand />
               </button>
             </div>
-          </div>
-
-          {/* THUMBNAILS */}
-
-          <div className="gallery-thumbs" ref={thumbsRef}>
-            {slides.map((item, thumbIndex) => (
-              <button
-                key={item.src}
-                type="button"
-                ref={(element) => {
-                  thumbRefs.current[thumbIndex] = element;
-                }}
-                className={`gallery-thumb ${thumbIndex === index ? "is-active" : ""}`}
-                onClick={() => setIndex(thumbIndex)}
-                aria-label={`Show image ${thumbIndex + 1}: ${item.caption}`}
-                aria-current={thumbIndex === index}
-              >
-                <Image
-                  src={item.src}
-                  alt=""
-                  fill
-                  sizes="140px"
-                  className="gallery-thumb-image"
-                />
-              </button>
-            ))}
           </div>
         </div>
       </div>
