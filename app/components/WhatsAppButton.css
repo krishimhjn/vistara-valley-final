@@ -1,4 +1,4 @@
-.whatsapp-float {
+.contact-float {
   position: fixed;
 
   right: 22px;
@@ -6,6 +6,15 @@
 
   z-index: 90;
 
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+
+  transition: opacity 0.25s ease;
+}
+
+.contact-float-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -15,13 +24,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---------- round icon ---------- */
+/* ---------- round icons ---------- */
 
-.whatsapp-float-icon {
+.contact-float-icon {
   position: relative;
 
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
 
   display: flex;
   align-items: center;
@@ -31,12 +40,10 @@
 
   border-radius: 50%;
 
-  background: #25d366;
-
   color: #ffffff;
 
   box-shadow:
-    0 8px 22px rgba(15, 80, 45, 0.35),
+    0 8px 22px rgba(10, 40, 28, 0.32),
     0 2px 6px rgba(0, 0, 0, 0.18);
 
   transition:
@@ -44,13 +51,38 @@
     transform 0.25s ease;
 }
 
-/* soft pulsing ring */
+.contact-float-call .contact-float-icon {
+  background: #17372e;
+}
 
-.whatsapp-float-icon::before {
+.contact-float-whatsapp .contact-float-icon {
+  background: #25d366;
+}
+
+.contact-float-call:hover .contact-float-icon {
+  background: #1d493e;
+
+  transform: scale(1.06);
+}
+
+.contact-float-whatsapp:hover .contact-float-icon {
+  background: #1ebe5a;
+
+  transform: scale(1.06);
+}
+
+.contact-float-item:active .contact-float-icon {
+  transform: scale(0.96);
+}
+
+/* soft pulsing ring on WhatsApp */
+
+.contact-float-whatsapp .contact-float-icon::before {
   content: "";
 
   position: absolute;
   inset: 0;
+  z-index: -1;
 
   border-radius: 50%;
 
@@ -58,33 +90,21 @@
 
   opacity: 0.45;
 
-  animation: whatsappPulse 2.4s ease-out infinite;
-
-  z-index: -1;
+  animation: contactPulse 2.4s ease-out infinite;
 }
 
-.whatsapp-float:hover .whatsapp-float-icon {
-  background: #1ebe5a;
-
-  transform: scale(1.06);
-}
-
-.whatsapp-float:active .whatsapp-float-icon {
-  transform: scale(0.96);
-}
-
-.whatsapp-float:focus-visible {
+.contact-float-item:focus-visible {
   outline: none;
 }
 
-.whatsapp-float:focus-visible .whatsapp-float-icon {
-  outline: 3px solid #17372e;
+.contact-float-item:focus-visible .contact-float-icon {
+  outline: 3px solid #c6a15b;
   outline-offset: 3px;
 }
 
-/* ---------- text label (desktop hover) ---------- */
+/* ---------- text labels (desktop hover) ---------- */
 
-.whatsapp-float-label {
+.contact-float-label {
   padding: 10px 16px;
 
   border-radius: 999px;
@@ -109,27 +129,23 @@
   pointer-events: none;
 }
 
-.whatsapp-float:hover .whatsapp-float-label,
-.whatsapp-float:focus-visible .whatsapp-float-label {
+.contact-float-item:hover .contact-float-label,
+.contact-float-item:focus-visible .contact-float-label {
   opacity: 1;
   transform: translateX(0);
 }
 
 /* ---------- hide while the mobile menu is open ---------- */
 
-body:has(.hero-mobile-menu.is-open) .whatsapp-float {
+body:has(.hero-mobile-menu.is-open) .contact-float {
   opacity: 0;
 
   pointer-events: none;
 }
 
-.whatsapp-float {
-  transition: opacity 0.25s ease;
-}
-
 /* ---------- animation ---------- */
 
-@keyframes whatsappPulse {
+@keyframes contactPulse {
   0% {
     transform: scale(1);
     opacity: 0.45;
@@ -145,37 +161,43 @@ body:has(.hero-mobile-menu.is-open) .whatsapp-float {
 /* ---------- phones ---------- */
 
 @media (max-width: 760px) {
-  .whatsapp-float {
+  .contact-float {
     right: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom));
+
+    gap: 10px;
   }
 
-  .whatsapp-float-icon {
-    width: 54px;
-    height: 54px;
+  .contact-float-icon {
+    width: 52px;
+    height: 52px;
   }
 
-  .whatsapp-float-icon svg {
-    width: 28px;
-    height: 28px;
+  .contact-float-call .contact-float-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .contact-float-whatsapp .contact-float-icon svg {
+    width: 27px;
+    height: 27px;
   }
 
   /* no hover on touch screens */
-  .whatsapp-float-label {
+  .contact-float-label {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .whatsapp-float-icon::before {
-    animation: none;
-
+  .contact-float-whatsapp .contact-float-icon::before {
     display: none;
+    animation: none;
   }
 
-  .whatsapp-float-icon,
-  .whatsapp-float-label,
-  .whatsapp-float {
+  .contact-float,
+  .contact-float-icon,
+  .contact-float-label {
     transition: none;
   }
 }
