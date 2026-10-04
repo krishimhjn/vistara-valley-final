@@ -1,10 +1,11 @@
 import Hero from "./components/Hero";
 import ProjectIntro from "./components/ProjectIntro";
 import Amenities from "./components/Amenities";
-import MasterLocation from "./components/MasterLocation";
+import MasterLocation from "./components/Location";
 import Gallery from "./components/Gallery";
 import Contact from "./components/Contact";
 import Testimonials from "./components/Testimonials"
+import FAQ from "./components/FAQ";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -56,6 +57,7 @@ export default function Home() {
         <Amenities />
         <MasterLocation />
         <Testimonials />
+        <FAQ/>
         <Contact />
       </main>
     </>
