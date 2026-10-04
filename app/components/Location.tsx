@@ -22,7 +22,7 @@ const places = [
   { name: "Khargone City Centre / Main Market", distance: "1.5 km" },
   { name: "Khargone Bus Stand", distance: "1.5 km" },
   { name: "Collectorate / District Court", distance: "2 km" },
-  { name: "Bhandari Public School", distance: "2 km" },
+  { name: "Bhandari Public School", distance: "2.8 km" },
   { name: "D-Mart", distance: "2 km" },
 ];
 
