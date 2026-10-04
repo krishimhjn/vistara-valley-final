@@ -6,7 +6,7 @@ import Gallery from "./components/Gallery";
 import Contact from "./components/Contact";
 import Testimonials from "./components/Testimonials"
 import FAQ from "./components/FAQ";
-
+import WhatsAppButton from "./components/WhatsAppButton";
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "RealEstateAgent",
@@ -59,6 +59,7 @@ export default function Home() {
         <Testimonials />
         <FAQ/>
         <Contact />
+        <WhatsAppButton />
       </main>
     </>
   );
