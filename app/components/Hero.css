@@ -781,11 +781,6 @@
 }
 
 /* =========================================
-   MOBILE — show the full "VISTARA VALLEY"
-   lettering in the wallpaper
-   ========================================= */
-
-/* =========================================
    MOBILE — text up, info card up,
    "VISTARA VALLEY" lettering visible between them
    ========================================= */
@@ -833,7 +828,6 @@
     bottom: auto;
   }
 }
-
 
 /* =========================================
    MOBILE NAVIGATION — redesigned
@@ -1134,5 +1128,146 @@
   .hero-mobile-footer,
   .hero-menu-button span {
     transition: none;
+  }
+}
+
+/* =========================================
+   HERO ANIMATIONS
+   ========================================= */
+
+/* heading words (each rises out of a mask) */
+.hero-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+
+  padding: 0.08em 0 0.14em;
+  margin: -0.08em 0 -0.14em;
+}
+
+.hero-word > span {
+  display: inline-block;
+}
+
+/* numbers don't jiggle while counting */
+.hero-info-text strong,
+.hero-info-text small {
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-sr-only {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  overflow: hidden;
+
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* arrow nudges on hover */
+.hero-primary-button strong {
+  transition: transform 0.25s ease;
+}
+
+.hero-primary-button:hover strong {
+  transform: translateX(4px);
+}
+
+/* only play motion if the visitor hasn't asked to reduce it */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-navbar {
+    animation: heroFadeDown 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .hero-content .hero-label {
+    animation: heroFadeUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
+  }
+
+  .hero-word > span {
+    animation: heroWordUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(0.4s + var(--w) * 0.1s);
+  }
+
+  .hero-content .hero-description {
+    animation: heroFadeUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.95s both;
+  }
+
+  .hero-content .hero-primary-button {
+    animation: heroFadeUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 1.15s both;
+  }
+
+  .hero-info-card {
+    animation: heroFadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 1.2s both;
+  }
+}
+
+/* slow cinematic zoom on the photo (desktop only) */
+@media (prefers-reduced-motion: no-preference) and (min-width: 761px) {
+  .hero-background {
+    animation: heroZoom 24s ease-out both;
+  }
+}
+
+/* phones: a soft fade-in instead of a zoom, so the lettering stays put */
+@media (prefers-reduced-motion: no-preference) and (max-width: 760px) {
+  .hero-background {
+    animation: heroFadeIn 1.4s ease both;
+  }
+}
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes heroFadeDown {
+  from {
+    opacity: 0;
+    translate: 0 -16px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes heroWordUp {
+  from {
+    translate: 0 115%;
+  }
+
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes heroZoom {
+  from {
+    transform: scale(1.14);
+  }
+
+  to {
+    transform: scale(1.01);
+  }
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }

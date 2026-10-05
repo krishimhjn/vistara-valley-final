@@ -169,6 +169,66 @@ function ArrowIcon() {
   );
 }
 
+/* ---------- numbers count up once, shortly after the page loads ---------- */
+
+function CountUp({
+  end,
+  suffix = "",
+  delay = 1300,
+  duration = 1600,
+}: {
+  end: number;
+  suffix?: string;
+  delay?: number;
+  duration?: number;
+}) {
+  const [value, setValue] = useState(end);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let frame = 0;
+    let startTime = 0;
+
+    setValue(0);
+
+    const timer = window.setTimeout(() => {
+      const tick = (now: number) => {
+        if (!startTime) startTime = now;
+
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        setValue(Math.round(end * eased));
+
+        if (progress < 1) frame = requestAnimationFrame(tick);
+      };
+
+      frame = requestAnimationFrame(tick);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [end, delay, duration]);
+
+  return (
+    <>
+      {/* final value for screen readers and search engines */}
+      <span className="hero-sr-only">
+        {end}
+        {suffix}
+      </span>
+
+      <span aria-hidden="true">
+        {value}
+        {suffix}
+      </span>
+    </>
+  );
+}
+
 export default function Hero() {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -293,7 +353,17 @@ export default function Hero() {
         </p>
 
         <h1>
-          Life in the city
+          {["Life", "in", "the", "city"].map((word, index) => (
+            <span key={word}>
+              <span
+                className="hero-word"
+                style={{ "--w": index } as React.CSSProperties}
+              >
+                <span>{word}</span>
+              </span>
+              {index < 3 ? " " : ""}
+            </span>
+          ))}
         </h1>
 
         <p className="hero-description">
@@ -318,7 +388,9 @@ export default function Hero() {
 
           <div className="hero-info-text">
             <span>Total Plots</span>
-            <strong>220+</strong>
+            <strong>
+              <CountUp end={220} suffix="+" />
+            </strong>
           </div>
         </div>
 
@@ -329,8 +401,12 @@ export default function Hero() {
 
           <div className="hero-info-text">
             <span>Plot Mix</span>
-            <strong>190+ Residential</strong>
-            <small>30+ Commercial</small>
+            <strong>
+              <CountUp end={190} suffix="+ Residential" />
+            </strong>
+            <small>
+              <CountUp end={30} suffix="+ Commercial" />
+            </small>
           </div>
         </div>
 
