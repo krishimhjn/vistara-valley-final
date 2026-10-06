@@ -8,7 +8,7 @@ import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import WhatsAppButton from "./components/WhatsAppButton";
 import Reveal from "./components/Reveal";
-
+import Highlights from "./Highlights";
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "RealEstateAgent",
@@ -56,6 +56,9 @@ export default function Home() {
         {/* hero plays its own entrance animation, so it is not wrapped */}
         <Hero />
 
+<Reveal>
+  <Highlights />
+</Reveal>
         <Reveal>
           <ProjectIntro />
         </Reveal>
