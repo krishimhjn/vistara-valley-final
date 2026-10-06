@@ -9,6 +9,9 @@ import FAQ from "./components/FAQ";
 import WhatsAppButton from "./components/WhatsAppButton";
 import Reveal from "./components/Reveal";
 import Highlights from "./Highlights";
+import WhyInvest from "./components/WhyInvest";
+import BookingCTA from "./components/BookingCTA";
+ 
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "RealEstateAgent",
@@ -74,7 +77,9 @@ export default function Home() {
         <Reveal>
           <MasterLocation />
         </Reveal>
-
+<Reveal>
+  <WhyInvest />
+</Reveal>
         <Reveal>
           <Testimonials />
         </Reveal>
@@ -82,7 +87,9 @@ export default function Home() {
         <Reveal>
           <FAQ />
         </Reveal>
-
+<Reveal>
+  <BookingCTA />
+</Reveal>
         <Reveal>
           <Contact />
         </Reveal>

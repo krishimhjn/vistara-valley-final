@@ -1271,3 +1271,130 @@
     opacity: 1;
   }
 }
+
+
+/* =========================================
+   STICKY HEADER
+   ========================================= */
+
+:root {
+  --nav-h: 92px;
+}
+
+/* anchor links (#about, #gallery ...) no longer hide under the bar */
+html {
+  scroll-padding-top: var(--nav-h);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* the bar is out of the flow now, so the hero makes room for it */
+.hero {
+  z-index: 1;
+
+  box-sizing: border-box;
+  padding-top: var(--nav-h);
+}
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 50;
+
+  background: transparent;
+
+  border-bottom: 1px solid transparent;
+
+  transition:
+    background 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+.site-header .hero-navbar {
+  height: var(--nav-h);
+  padding: 0;
+
+  transition: height 0.35s ease;
+}
+
+.hero-logo img {
+  transition: width 0.35s ease;
+}
+
+/* compact glass bar once the page is scrolled */
+.site-header.is-scrolled {
+  background: rgba(12, 26, 20, 0.82);
+
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.site-header.is-scrolled .hero-navbar {
+  height: 68px;
+}
+
+.site-header.is-scrolled .hero-logo img {
+  width: 158px;
+}
+
+/* browsers without blur support get a more solid bar */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header.is-scrolled {
+    background: rgba(12, 26, 20, 0.96);
+  }
+}
+
+/* while the full-screen mobile menu is open, the bar blends into it */
+body:has(.hero-mobile-menu.is-open) .site-header {
+  background: transparent;
+
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+
+  box-shadow: none;
+  border-bottom-color: transparent;
+}
+
+/* ---------- tablet ---------- */
+
+@media (max-width: 1050px) {
+  .site-header.is-scrolled .hero-logo img {
+    width: 145px;
+  }
+}
+
+/* ---------- phones ---------- */
+
+@media (max-width: 760px) {
+  :root {
+    --nav-h: 76px;
+  }
+
+  .site-header.is-scrolled .hero-navbar {
+    height: 62px;
+  }
+
+  .site-header.is-scrolled .hero-logo img {
+    width: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header,
+  .site-header .hero-navbar,
+  .hero-logo img {
+    transition: none;
+  }
+}

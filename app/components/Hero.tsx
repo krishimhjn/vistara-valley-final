@@ -231,10 +231,21 @@ function CountUp({
 
 export default function Hero() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const closeMenu = () => {
     setMenuOpen(false);
   };
+
+  /* sticky header: switch to the compact glass style after scrolling */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   /* lock page scroll while the menu is open, close with Esc */
   useEffect(() => {
@@ -270,41 +281,43 @@ export default function Hero() {
 
       <div className="hero-overlay" />
 
-      {/* NAVBAR */}
-      <header className="hero-navbar">
-        <a href="#home" className="hero-logo" onClick={closeMenu}>
-          <img
-            src="/images/logo.png"
-            alt="Vistara Valley"
-          />
-        </a>
+      {/* STICKY HEADER (logo + navigation) */}
+      <header className={`site-header ${scrolled ? "is-scrolled" : ""}`}>
+        <div className="hero-navbar">
+          <a href="#home" className="hero-logo" onClick={closeMenu}>
+            <img
+              src="/images/logo.png"
+              alt="Vistara Valley"
+            />
+          </a>
 
-        <nav className="hero-nav" aria-label="Main navigation">
-          {navLinks.map((link) => (
-            <a key={link.href} href={link.href}>
-              {link.label}
-            </a>
-          ))}
-        </nav>
+          <nav className="hero-nav" aria-label="Main navigation">
+            {navLinks.map((link) => (
+              <a key={link.href} href={link.href}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
 
-        <a href="#contact" className="hero-nav-cta">
-          Book a Site Visit
-        </a>
+          <a href="#contact" className="hero-nav-cta">
+            Book a Site Visit
+          </a>
 
-        <button
-          className={`hero-menu-button ${menuOpen ? "is-open" : ""}`}
-          type="button"
-          aria-label={
-            menuOpen ? "Close navigation menu" : "Open navigation menu"
-          }
-          aria-expanded={menuOpen}
-          aria-controls="hero-mobile-menu"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+          <button
+            className={`hero-menu-button ${menuOpen ? "is-open" : ""}`}
+            type="button"
+            aria-label={
+              menuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
+            aria-expanded={menuOpen}
+            aria-controls="hero-mobile-menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </header>
 
       {/* MOBILE MENU */}
