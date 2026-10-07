@@ -59,13 +59,13 @@ export default function Home() {
         {/* hero plays its own entrance animation, so it is not wrapped */}
         <Hero />
 
-<Reveal>
-  <Highlights />
-</Reveal>
+
         <Reveal>
           <ProjectIntro />
         </Reveal>
-
+<Reveal>
+  <Highlights />
+</Reveal>
         <Reveal>
           <Gallery />
         </Reveal>
