@@ -1,4 +1,5 @@
 import Hero from "./components/Hero";
+import Highlights from "./components/Highlights";
 import ProjectIntro from "./components/ProjectIntro";
 import Amenities from "./components/Amenities";
 import MasterLocation from "./components/Location";
@@ -8,10 +9,10 @@ import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import WhatsAppButton from "./components/WhatsAppButton";
 import Reveal from "./components/Reveal";
-import Highlights from "./Highlights";
 import WhyInvest from "./components/WhyInvest";
 import BookingCTA from "./components/BookingCTA";
- 
+import TabBar from "./components/TabBar";
+
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "RealEstateAgent",
@@ -59,13 +60,14 @@ export default function Home() {
         {/* hero plays its own entrance animation, so it is not wrapped */}
         <Hero />
 
+        <Reveal>
+          <Highlights />
+        </Reveal>
 
         <Reveal>
           <ProjectIntro />
         </Reveal>
-<Reveal>
-  <Highlights />
-</Reveal>
+
         <Reveal>
           <Gallery />
         </Reveal>
@@ -77,9 +79,11 @@ export default function Home() {
         <Reveal>
           <MasterLocation />
         </Reveal>
-<Reveal>
-  <WhyInvest />
-</Reveal>
+
+        <Reveal>
+          <WhyInvest />
+        </Reveal>
+
         <Reveal>
           <Testimonials />
         </Reveal>
@@ -87,15 +91,18 @@ export default function Home() {
         <Reveal>
           <FAQ />
         </Reveal>
-<Reveal>
-  <BookingCTA />
-</Reveal>
+
+        <Reveal>
+          <BookingCTA />
+        </Reveal>
+
         <Reveal>
           <Contact />
         </Reveal>
       </main>
 
       <WhatsAppButton />
+      <TabBar />
     </>
   );
 }
