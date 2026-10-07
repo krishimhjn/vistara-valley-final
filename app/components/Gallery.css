@@ -155,11 +155,11 @@
 }
 
 /* =========================
-   SCROLLABLE PANEL  (NEW)
+   SCROLLABLE PANEL
 ========================= */
 
 .gallery-scroll {
-  max-height: 640px; /* the "window" height, change to taste */
+  height: 640px; /* fixed, so every tab keeps the same section size */
 
   overflow-y: auto;
   overflow-x: hidden;
@@ -167,6 +167,9 @@
   /* room for the scrollbar so it doesn't touch the images */
   padding-right: 10px;
   margin-right: -10px;
+
+  /* keeps the grid width the same whether or not a scrollbar shows */
+  scrollbar-gutter: stable;
 
   /* stops the page from scrolling when you reach the end of the box */
   overscroll-behavior: contain;
@@ -705,9 +708,9 @@
     letter-spacing: 0.14em;
   }
 
-  /* NEW: scroll window height on phones */
+  /* scroll window height on phones */
   .gallery-scroll {
-    max-height: 70vh;
+    height: 70vh;
   }
 
   .gallery-grid {
