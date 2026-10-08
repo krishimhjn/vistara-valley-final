@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import "./TabBar.css";
 
 /*
   ✏️ The tabs. `id` must match the section id on your page.
-  To add a 5th tab, copy a line, e.g. Contact:
-  { id: "contact", label: "Contact", icon: <path d="..." /> }
 */
 const tabs = [
   {
@@ -48,11 +47,26 @@ const tabs = [
   },
 ];
 
+/* how long after the last scroll the bar comes back (milliseconds) */
+const SHOW_AFTER_IDLE = 700;
+
 export default function TabBar() {
+  const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState("home");
+  const [hidden, setHidden] = useState(false);
+
+  const lastY = useRef(0);
+  const ticking = useRef(false);
+  const idleTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* highlight the tab of the section currently in the middle of the screen */
   useEffect(() => {
+    if (!mounted) return;
+
     const elements = tabs
       .map((tab) => document.getElementById(tab.id))
       .filter((el): el is HTMLElement => el !== null);
@@ -71,10 +85,67 @@ export default function TabBar() {
     elements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, []);
+  }, [mounted]);
 
-  return (
-    <nav className="tabbar" aria-label="Quick navigation">
+  /* hide while scrolling down, come back on scroll up or when scrolling stops */
+  useEffect(() => {
+    if (!mounted) return;
+
+    lastY.current = window.scrollY;
+
+    const update = () => {
+      const y = window.scrollY;
+      const delta = y - lastY.current;
+
+      if (y < 80) {
+        setHidden(false);
+      } else if (delta > 6) {
+        setHidden(true);
+      } else if (delta < -6) {
+        setHidden(false);
+      }
+
+      lastY.current = y;
+      ticking.current = false;
+
+      window.clearTimeout(idleTimer.current);
+      idleTimer.current = window.setTimeout(
+        () => setHidden(false),
+        SHOW_AFTER_IDLE
+      );
+    };
+
+    const onScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(idleTimer.current);
+    };
+  }, [mounted]);
+
+  if (!mounted) return null;
+
+  const activeIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.id === active)
+  );
+
+  return createPortal(
+    <nav
+      className={`tabbar ${hidden ? "is-hidden" : ""}`}
+      style={{ "--i": activeIndex } as React.CSSProperties}
+      aria-label="Quick navigation"
+    >
+      {/* sliding glass pill behind the active tab */}
+      <span className="tabbar-pill" aria-hidden="true" />
+
       {tabs.map((tab) => (
         <a
           key={tab.id}
@@ -99,6 +170,7 @@ export default function TabBar() {
           <span>{tab.label}</span>
         </a>
       ))}
-    </nav>
+    </nav>,
+    document.body
   );
 }

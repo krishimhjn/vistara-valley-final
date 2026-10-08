@@ -1,102 +1,214 @@
-/* the bar only exists on phones */
+/* =========================================
+   LIQUID GLASS TAB BAR
+   ========================================= */
+
 .tabbar {
-  display: none;
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+
+  z-index: 80;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  padding: 6px;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 28px;
+
+  /* frosted, slightly tinted glass */
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0.34) 45%,
+      rgba(255, 255, 255, 0.5) 100%
+    );
+
+  -webkit-backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+
+  /* light edges + soft shadow = glass thickness */
+  box-shadow:
+    0 14px 38px rgba(10, 30, 22, 0.24),
+    0 2px 6px rgba(10, 30, 22, 0.1),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 22px rgba(255, 255, 255, 0.28);
+
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.35s ease;
 }
 
-@media (max-width: 760px) {
+/* shine across the top of the glass */
+.tabbar::before {
+  content: "";
+
+  position: absolute;
+  inset: 0 0 50% 0;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0)
+  );
+
+  border-radius: 28px 28px 0 0;
+
+  pointer-events: none;
+}
+
+/* hidden while scrolling down */
+.tabbar.is-hidden {
+  transform: translateY(calc(100% + 40px));
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+/* ---------- sliding glass pill ---------- */
+
+.tabbar-pill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+
+  width: calc((100% - 12px) / 4);
+
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 22px;
+
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(220, 235, 226, 0.7)
+  );
+
+  box-shadow:
+    0 6px 16px rgba(10, 40, 28, 0.22),
+    inset 0 1.5px 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 6px rgba(23, 55, 46, 0.1);
+
+  transform: translateX(calc(var(--i, 0) * 100%));
+
+  /* the slight overshoot gives the "liquid" feel */
+  transition: transform 0.55s cubic-bezier(0.34, 1.45, 0.5, 1);
+
+  pointer-events: none;
+}
+
+/* ---------- items ---------- */
+
+.tabbar-item {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+
+  padding: 9px 0 8px;
+
+  border-radius: 22px;
+
+  color: #3d4b44;
+  text-decoration: none;
+
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.tabbar-item svg {
+  width: 21px;
+  height: 21px;
+}
+
+.tabbar-item.is-active {
+  color: #17372e;
+}
+
+.tabbar-item:active {
+  transform: scale(0.94);
+}
+
+.tabbar-item:focus-visible {
+  outline: 2px solid #c6a15b;
+  outline-offset: -2px;
+}
+
+/* browsers without blur support get a solid bar instead */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tabbar {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    background: rgba(250, 249, 245, 0.97);
+  }
+}
 
-    z-index: 80;
+/* ---------- page spacing + floating buttons ---------- */
 
-    display: flex;
-    justify-content: space-around;
-    gap: 4px;
+/* room at the bottom of the page so the bar never covers content */
+body {
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+}
 
-    padding: 7px;
+/* lift the Call + WhatsApp buttons above the bar */
+body .contact-float {
+  bottom: calc(96px + env(safe-area-inset-bottom));
 
-    border: 1px solid rgba(23, 55, 46, 0.1);
-    border-radius: 24px;
+  transition:
+    bottom 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.25s ease;
+}
 
-    background: rgba(255, 255, 255, 0.86);
+/* when the bar slides away, the buttons drop down to the corner */
+body:has(.tabbar.is-hidden) .contact-float {
+  bottom: calc(18px + env(safe-area-inset-bottom));
+}
 
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
-    backdrop-filter: blur(18px) saturate(150%);
+/* hide the bar while the full-screen mobile menu is open */
+body:has(.hero-mobile-menu.is-open) .tabbar {
+  opacity: 0;
+  transform: translateY(30px);
 
-    box-shadow: 0 12px 34px rgba(10, 30, 22, 0.2);
+  pointer-events: none;
+}
 
-    transition:
-      opacity 0.3s ease,
-      transform 0.3s ease;
+/* ---------- desktop: no bar ---------- */
+
+@media (min-width: 761px) {
+  .tabbar {
+    display: none !important;
   }
 
-  .tabbar-item {
-    flex: 1;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-
-    padding: 8px 0 7px;
-
-    border-radius: 17px;
-
-    color: #626861;
-    text-decoration: none;
-
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-
-    -webkit-tap-highlight-color: transparent;
-
-    transition:
-      background 0.3s ease,
-      color 0.3s ease;
-  }
-
-  .tabbar-item svg {
-    width: 21px;
-    height: 21px;
-  }
-
-  .tabbar-item.is-active {
-    background: #17372e;
-
-    color: #ffffff;
-  }
-
-  .tabbar-item:focus-visible {
-    outline: 2px solid #c6a15b;
-    outline-offset: 2px;
-  }
-
-  /* room at the bottom of the page so the bar never covers content */
   body {
-    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
   }
 
-  /* lift the Call + WhatsApp buttons above the bar */
-  body .contact-float {
-    bottom: calc(92px + env(safe-area-inset-bottom));
-  }
-
-  /* hide the bar while the full-screen mobile menu is open */
-  body:has(.hero-mobile-menu.is-open) .tabbar {
-    opacity: 0;
-    transform: translateY(20px);
-
-    pointer-events: none;
+  body .contact-float,
+  body:has(.tabbar.is-hidden) .contact-float {
+    bottom: calc(22px + env(safe-area-inset-bottom));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tabbar,
-  .tabbar-item {
+  .tabbar-pill,
+  .tabbar-item,
+  body .contact-float {
     transition: none;
   }
 }

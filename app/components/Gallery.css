@@ -78,10 +78,16 @@
 
   margin-bottom: 28px;
 
+  /* sideways scroll only when the tabs don't fit; never up/down */
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 
-  border-bottom: 1px solid var(--g-line);
+  /* the grey base line is drawn inside the row, so nothing sticks out */
+  background: linear-gradient(var(--g-line), var(--g-line)) bottom / 100% 1px
+    no-repeat;
 }
 
 .gallery-tabs::-webkit-scrollbar {
@@ -100,30 +106,45 @@
   background: transparent;
 
   color: var(--g-text);
+  font-family: inherit;
   font-size: 11px;
   font-weight: 500;
+  line-height: 1.4;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  white-space: nowrap;
 
   cursor: pointer;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 
   transition: color 0.3s ease;
 }
 
+/* the count no longer changes the line height */
 .gallery-tab sup {
+  position: relative;
+  top: -0.35em;
+
   margin-left: 6px;
+
+  vertical-align: baseline;
+  line-height: 0;
 
   color: var(--g-gold);
   font-size: 9px;
   letter-spacing: 0.06em;
 }
 
+/* underline now sits INSIDE the row (bottom: 0), not outside it */
 .gallery-tab::after {
   content: "";
 
   position: absolute;
   left: 0;
-  bottom: -1px;
+  bottom: 0;
 
   width: 100%;
   height: 2px;
@@ -151,7 +172,7 @@
 .gallery-arrow:focus-visible,
 .gallery-enquire:focus-visible {
   outline: 2px solid var(--g-gold);
-  outline-offset: 3px;
+  outline-offset: -2px;
 }
 
 /* =========================
