@@ -1272,7 +1272,6 @@
   }
 }
 
-
 /* =========================================
    STICKY HEADER
    ========================================= */
@@ -1396,5 +1395,34 @@ body:has(.hero-mobile-menu.is-open) .site-header {
   .site-header .hero-navbar,
   .hero-logo img {
     transition: none;
+  }
+}
+
+/* =========================================
+   SMOOTH PARALLAX
+   --py = how far the page has scrolled (px, eased)
+   --p  = same, as 0 → 1 across the hero
+   ========================================= */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* photo moves at ~65% of the scroll speed */
+  .hero-background {
+    translate: 0 calc(var(--py, 0) * 0.35px);
+    will-change: translate;
+  }
+
+  /* headline block drifts down a little and fades out */
+  .hero-content {
+    translate: 0 calc(var(--py, 0) * 0.22px);
+    opacity: calc(1 - var(--p, 0) * 1.25);
+    will-change: translate, opacity;
+  }
+}
+
+/* phones: the photo is stacked in a fixed layout, so keep it still
+   and let only the text drift */
+@media (max-width: 760px) {
+  .hero-background {
+    translate: none;
   }
 }

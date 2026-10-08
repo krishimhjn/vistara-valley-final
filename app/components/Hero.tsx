@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Hero.css";
 
 /* ---------- info card icons (24 x 24 line icons) ---------- */
@@ -233,9 +233,58 @@ export default function Hero() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  const heroRef = useRef<HTMLElement | null>(null);
+
   const closeMenu = () => {
     setMenuOpen(false);
   };
+
+  /* smooth parallax: eases toward the scroll position every frame */
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let target = 0;
+    let current = 0;
+    let frame = 0;
+    let running = false;
+
+    const render = () => {
+      current += (target - current) * 0.12;
+
+      if (Math.abs(target - current) < 0.1) current = target;
+
+      const height = hero.offsetHeight || 1;
+
+      hero.style.setProperty("--py", current.toFixed(2));
+      hero.style.setProperty("--p", Math.min(current / height, 1).toFixed(3));
+
+      if (current !== target) {
+        frame = requestAnimationFrame(render);
+      } else {
+        running = false;
+      }
+    };
+
+    const onScroll = () => {
+      target = Math.min(window.scrollY, hero.offsetHeight);
+
+      if (!running) {
+        running = true;
+        frame = requestAnimationFrame(render);
+      }
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
 
   /* sticky header: switch to the compact glass style after scrolling */
   useEffect(() => {
@@ -276,7 +325,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="hero" id="home">
+    <section className="hero" id="home" ref={heroRef}>
       <div className="hero-background" aria-hidden="true" />
 
       <div className="hero-overlay" />
