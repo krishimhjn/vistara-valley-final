@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import "./Gallery.css";
 import {
@@ -22,6 +29,24 @@ const AUTOPLAY_MS = 6000; // time each image stays on the stage
 const DARK = false; // true = dark green "cinema" section
 
 const pad = (n: number) => String(n).padStart(2, "0");
+
+/* how long a swipe takes to settle (ms) */
+const SLIDE_MS = 320;
+
+/* layout effect that is safe during server rendering */
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+/* decides what a finished swipe should do:
+   1 = next photo, -1 = previous photo, 0 = snap back */
+const decideSwipe = (dx: number, width: number, ms: number): -1 | 0 | 1 => {
+  const speed = Math.abs(dx) / Math.max(ms, 1);
+  const far = Math.abs(dx) > width * 0.2;
+  const flick = speed > 0.45 && Math.abs(dx) > 30;
+
+  if (!far && !flick) return 0;
+  return dx < 0 ? 1 : -1;
+};
 
 const STAGE_SIZES = "(max-width: 760px) 100vw, (max-width: 1000px) 92vw, 1240px";
 
@@ -126,6 +151,7 @@ export default function Gallery() {
   const [inView, setInView] = useState(false);
   const [reduce, setReduce] = useState(false);
   const [tabVisible, setTabVisible] = useState(true);
+  const [instant, setInstant] = useState(false);
 
   const [viewer, setViewer] = useState(false);
   const [scale, setScale] = useState(1);
@@ -144,6 +170,17 @@ export default function Gallery() {
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
+  const dragRef = useRef<HTMLDivElement | null>(null);
+  const vTrackRef = useRef<HTMLDivElement | null>(null);
+  const busy = useRef(false);
+  const vLock = useRef<"" | "x" | "y">("");
+  const sw = useRef<{ x: number; y: number; t: number; lock: "" | "x" | "y"; dx: number }>({
+    x: 0,
+    y: 0,
+    t: 0,
+    lock: "",
+    dx: 0,
+  });
 
   const swiped = useRef(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -162,7 +199,7 @@ export default function Gallery() {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef({ dist: 0, scale: 1 });
   const drag = useRef({ x: 0, y: 0, px: 0, py: 0 });
-  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
   const lastTap = useRef(0);
 
   const list: Item[] = useMemo(
@@ -218,24 +255,36 @@ export default function Gallery() {
   /* ---------- navigation ---------- */
 
   const select = useCallback(
-    (next: number) => {
+    (next: number, noFade = false) => {
       if (!total) return;
 
       const n = (next + total) % total;
       if (n === index) return;
 
-      setPrevItem(item ?? null);
+      /* after a finger swipe the new photo is already on screen,
+         so there is nothing to cross-fade */
+      setInstant(noFade);
+      setPrevItem(noFade ? null : item ?? null);
       setIndex(n);
       resetZoom();
     },
     [total, index, item, resetZoom]
   );
 
-  const go = useCallback((d: 1 | -1) => select(index + d), [select, index]);
+  const go = useCallback(
+    (d: 1 | -1, noFade = false) => select(index + d, noFade),
+    [select, index]
+  );
+
+  const goRef = useRef(go);
+  useEffect(() => {
+    goRef.current = go;
+  });
 
   const changeTab = (id: string) => {
     if (id === tab) return;
 
+    setInstant(false);
     setPrevItem(item ?? null);
     setTab(id);
     setIndex(0);
@@ -244,6 +293,40 @@ export default function Gallery() {
 
   const markLoaded = (src: string) =>
     setLoaded((p) => (p[src] ? p : { ...p, [src]: true }));
+
+  /* ---------- finger-following swipe ---------- */
+
+  /* slides `el` away (dir = ±1) or back to the middle (dir = 0) */
+  const settle = (el: HTMLElement | null, dir: -1 | 0 | 1, width: number) => {
+    const ms = reduce ? 0 : SLIDE_MS;
+
+    if (!el) {
+      if (dir) goRef.current(dir, true);
+      return;
+    }
+
+    busy.current = true;
+    el.style.transition = ms
+      ? `transform ${ms}ms cubic-bezier(0.22, 0.8, 0.24, 1)`
+      : "none";
+    el.style.transform = `translate3d(${-dir * width}px, 0, 0)`;
+
+    window.setTimeout(() => {
+      if (dir) goRef.current(dir, true);
+      else busy.current = false;
+    }, ms);
+  };
+
+  /* once the new photo is in place, put the sliding track back at 0
+     before the browser paints, so there is no visible jump */
+  useIsoLayoutEffect(() => {
+    [dragRef.current, vTrackRef.current].forEach((el) => {
+      if (!el) return;
+      el.style.transition = "none";
+      el.style.transform = "";
+    });
+    busy.current = false;
+  }, [index, tab]);
 
   /* ---------- open / close the fullscreen viewer ---------- */
 
@@ -456,22 +539,56 @@ export default function Gallery() {
   };
 
   const onStageTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     swiped.current = false;
+
+    sw.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      t: Date.now(),
+      lock: e.touches.length > 1 ? "y" : "",
+      dx: 0,
+    };
   };
 
-  const onStageTouchEnd = (e: React.TouchEvent) => {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start) return;
+  /* the photo follows the finger */
+  const onStageTouchMove = (e: React.TouchEvent) => {
+    const s = sw.current;
+    if (busy.current || total < 2 || s.lock === "y") return;
 
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = e.changedTouches[0].clientY - start.y;
+    const dx = e.touches[0].clientX - s.x;
+    const dy = e.touches[0].clientY - s.y;
 
-    if (Math.abs(dx) > 50 && Math.abs(dy) < 80) {
-      swiped.current = true;
-      go(dx > 0 ? -1 : 1);
+    if (!s.lock) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+
+      s.lock = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (s.lock === "x") setDragging(true);
     }
+
+    if (s.lock !== "x") return;
+
+    const el = dragRef.current;
+    if (!el) return;
+
+    s.dx = dx;
+    swiped.current = true;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${dx}px, 0, 0)`;
+  };
+
+  const onStageTouchEnd = () => {
+    const s = sw.current;
+    const wasSwipe = s.lock === "x";
+
+    s.lock = "";
+    setDragging(false);
+
+    if (!wasSwipe || busy.current) return;
+
+    const el = dragRef.current;
+    const width = el?.clientWidth || 1;
+
+    settle(el, decideSwipe(s.dx, width, Date.now() - s.t), width);
   };
 
   const onStageKey = (e: React.KeyboardEvent) => {
@@ -569,6 +686,8 @@ export default function Gallery() {
   /* ---------- fullscreen gestures ---------- */
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (busy.current) return;
+
     event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, {
       x: event.clientX,
@@ -582,6 +701,14 @@ export default function Gallery() {
         scale,
       };
       swipe.current = null;
+      vLock.current = "";
+
+      /* a second finger means pinch, so bring the slide back */
+      const track = vTrackRef.current;
+      if (track) {
+        track.style.transition = "none";
+        track.style.transform = "";
+      }
       return;
     }
 
@@ -591,7 +718,8 @@ export default function Gallery() {
       px: pos.x,
       py: pos.y,
     };
-    swipe.current = { x: event.clientX, y: event.clientY };
+    swipe.current = { x: event.clientX, y: event.clientY, t: Date.now() };
+    vLock.current = "";
 
     /* double tap / double click toggles zoom */
     const now = Date.now();
@@ -627,18 +755,49 @@ export default function Gallery() {
           scale
         )
       );
+      return;
+    }
+
+    /* not zoomed in: the photo follows the finger */
+    const start = swipe.current;
+    const track = vTrackRef.current;
+    if (!start || !track || total < 2 || vLock.current === "y") return;
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+
+    if (!vLock.current) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      vLock.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+
+    if (vLock.current === "x") {
+      track.style.transition = "none";
+      track.style.transform = `translate3d(${dx}px, 0, 0)`;
     }
   };
 
   const endPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(event.pointerId);
 
-    if (pointers.current.size === 0 && swipe.current && scale === 1) {
+    if (
+      pointers.current.size === 0 &&
+      swipe.current &&
+      scale === 1 &&
+      vLock.current === "x"
+    ) {
       const dx = event.clientX - swipe.current.x;
-      const dy = event.clientY - swipe.current.y;
+      const width = frameRef.current?.clientWidth || 1;
 
-      if (Math.abs(dx) > 60 && Math.abs(dy) < 80) go(dx > 0 ? -1 : 1);
+      lastTap.current = 0; /* a swipe is not a double tap */
+      settle(
+        vTrackRef.current,
+        decideSwipe(dx, width, Date.now() - swipe.current.t),
+        width
+      );
     }
+
+    if (pointers.current.size === 0) vLock.current = "";
 
     if (pointers.current.size === 1) {
       const [rest] = Array.from(pointers.current.values());
@@ -682,14 +841,11 @@ export default function Gallery() {
       )}`
     : "#";
 
-  /* next + previous images, de-duplicated so a 2-photo tab
-     (where next === previous) never produces the same React key twice */
-  const neighbours = Array.from(
-    new Set([
-      list[(index + 1) % (total || 1)],
-      list[(index - 1 + total) % (total || 1)],
-    ])
-  ).filter((n): n is Item => Boolean(n) && n !== item);
+  /* the photos on either side, shown while swiping.
+     (with only 2 photos both sides are the same picture, which is fine
+     because each slide has its own fixed key: "prev" / "next") */
+  const prevNb = total > 1 ? list[(index - 1 + total) % total] : undefined;
+  const nextNb = total > 1 ? list[(index + 1) % total] : undefined;
 
   /* =========================================
      RENDER
@@ -793,9 +949,27 @@ export default function Gallery() {
                   onPointerMove={onStageMove}
                   onPointerLeave={onStageLeave}
                   onTouchStart={onStageTouchStart}
+                  onTouchMove={onStageTouchMove}
                   onTouchEnd={onStageTouchEnd}
+                  onTouchCancel={onStageTouchEnd}
                 >
                   <div className="gx-tilt" ref={tiltRef}>
+                    <div className="gx-drag" ref={dragRef}>
+                    {prevNb && (
+                      <div className="gx-slide is-prev" aria-hidden="true">
+                        <Image
+                          src={prevNb.src}
+                          alt=""
+                          fill
+                          sizes={STAGE_SIZES}
+                          loading="eager"
+                          style={{ objectPosition: prevNb.position }}
+                          className="gx-img is-loaded"
+                          onLoad={() => markLoaded(prevNb.src)}
+                        />
+                      </div>
+                    )}
+
                     {prevItem && prevItem.src !== item.src && (
                       <div className="gx-layer is-prev" aria-hidden="true">
                         <Image
@@ -813,7 +987,7 @@ export default function Gallery() {
 
                     <div
                       key={item.src}
-                      className="gx-layer is-current"
+                      className={`gx-layer is-current ${instant ? "is-instant" : ""}`}
                       onAnimationEnd={(e) => {
                         if (e.target === e.currentTarget) setPrevItem(null);
                       }}
@@ -837,18 +1011,21 @@ export default function Gallery() {
                       />
                     </div>
 
-                    {/* load the next and previous image ahead of time */}
-                    {neighbours.map((n) => (
-                      <Image
-                        key={n.src}
-                        src={n.src}
-                        alt=""
-                        aria-hidden="true"
-                        fill
-                        sizes={STAGE_SIZES}
-                        className="gx-preload"
-                      />
-                    ))}
+                    {nextNb && (
+                      <div className="gx-slide is-next" aria-hidden="true">
+                        <Image
+                          src={nextNb.src}
+                          alt=""
+                          fill
+                          sizes={STAGE_SIZES}
+                          loading="eager"
+                          style={{ objectPosition: nextNb.position }}
+                          className="gx-img is-loaded"
+                          onLoad={() => markLoaded(nextNb.src)}
+                        />
+                      </div>
+                    )}
+                    </div>
                   </div>
 
                   <div className="gx-shade" aria-hidden="true" />
@@ -1070,24 +1247,54 @@ export default function Gallery() {
             onPointerCancel={endPointer}
             onWheel={onWheel}
           >
-            <div
-              className="gx-v-image"
-              style={{
-                transform: `translate3d(${pos.x}px, ${pos.y}px, 0) scale(${scale})`,
-                cursor: scale > 1 ? "grab" : "zoom-in",
-              }}
-            >
-              <Image
-                key={item.src}
-                src={item.src}
-                alt={item.alt}
-                fill
-                sizes="100vw"
-                quality={90}
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-                draggable={false}
-              />
+            <div className="gx-v-track" ref={vTrackRef}>
+              {prevNb && (
+                <div className="gx-v-slide is-prev" aria-hidden="true">
+                  <Image
+                    src={prevNb.src}
+                    alt=""
+                    fill
+                    sizes="100vw"
+                    quality={90}
+                    loading="eager"
+                    draggable={false}
+                  />
+                </div>
+              )}
+
+              <div
+                className="gx-v-image"
+                style={{
+                  transform: `translate3d(${pos.x}px, ${pos.y}px, 0) scale(${scale})`,
+                  cursor: scale > 1 ? "grab" : "zoom-in",
+                }}
+              >
+                <Image
+                  key={item.src}
+                  src={item.src}
+                  alt={item.alt}
+                  fill
+                  sizes="100vw"
+                  quality={90}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  draggable={false}
+                />
+              </div>
+
+              {nextNb && (
+                <div className="gx-v-slide is-next" aria-hidden="true">
+                  <Image
+                    src={nextNb.src}
+                    alt=""
+                    fill
+                    sizes="100vw"
+                    quality={90}
+                    loading="eager"
+                    draggable={false}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

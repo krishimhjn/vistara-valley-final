@@ -230,9 +230,36 @@
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* everything inside moves together while a finger drags the photo */
+.gx-drag {
+  position: absolute;
+  inset: 0;
+
+  will-change: transform;
+}
+
 .gx-layer {
   position: absolute;
   inset: 0;
+}
+
+/* the photos waiting just off-screen, left and right */
+.gx-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.gx-slide.is-prev {
+  transform: translate3d(-100%, 0, 0);
+}
+
+.gx-slide.is-next {
+  transform: translate3d(100%, 0, 0);
+}
+
+.gx-slide .gx-img {
+  animation: none;
+  transform: scale(1.04);
 }
 
 .gx-layer.is-prev {
@@ -243,6 +270,11 @@
   z-index: 2;
 
   animation: gxLayerIn 0.85s ease both;
+}
+
+/* after a swipe the photo is already visible, so no fade-in */
+.gx-layer.is-current.is-instant {
+  animation: none;
 }
 
 /* the soft placeholder (next/image blurDataURL) shows while the photo
@@ -751,6 +783,31 @@
 
   touch-action: none;
   user-select: none;
+}
+
+/* holds the previous / current / next photo side by side and slides with the finger */
+.gx-v-track {
+  position: absolute;
+  inset: 0;
+
+  will-change: transform;
+}
+
+.gx-v-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.gx-v-slide.is-prev {
+  transform: translate3d(-100%, 0, 0);
+}
+
+.gx-v-slide.is-next {
+  transform: translate3d(100%, 0, 0);
+}
+
+.gx-v-slide img {
+  object-fit: contain;
 }
 
 .gx-v-image {
