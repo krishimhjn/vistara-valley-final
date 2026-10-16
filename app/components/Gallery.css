@@ -1,22 +1,43 @@
-.gallery {
-  --g-bg: #f4f1e9;
-  --g-card: #e9e5dc;
-  --g-green: #17372e;
-  --g-gold: #92794c;
-  --g-gold-soft: rgba(146, 121, 76, 0.42);
-  --g-text: #626861;
-  --g-line: rgba(23, 55, 46, 0.14);
+.gx {
+  --bg: #f4f1e9;
+  --card: #e9e5dc;
+  --head: #17372e;
+  --gold: #92794c;
+  --gold-soft: rgba(146, 121, 76, 0.42);
+  --text: #626861;
+  --line: rgba(23, 55, 46, 0.14);
+  --chip: #e9e5dc;
+  --pill-text: #4d554f;
+  --pill-on: #17372e;
+  --pill-on-text: #ffffff;
+  --shadow: 0 30px 70px rgba(23, 55, 46, 0.2);
 
   position: relative;
 
   padding: 82px 0 90px;
 
-  background: var(--g-bg);
+  background: var(--bg);
 
   -webkit-font-smoothing: antialiased;
 }
 
-.gallery-container {
+/* dark "cinema" version: set DARK = true in Gallery.tsx */
+.gx--dark {
+  --bg: #0f1d18;
+  --card: #16281f;
+  --head: #f3eee2;
+  --gold: #c6a15b;
+  --gold-soft: rgba(198, 161, 91, 0.5);
+  --text: rgba(243, 238, 226, 0.68);
+  --line: rgba(243, 238, 226, 0.14);
+  --chip: rgba(255, 255, 255, 0.07);
+  --pill-text: rgba(243, 238, 226, 0.7);
+  --pill-on: #c6a15b;
+  --pill-on-text: #10241d;
+  --shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+}
+
+.gx-container {
   width: min(1320px, calc(100% - 124px));
   margin: 0 auto;
 }
@@ -25,28 +46,28 @@
    HEADER
 ========================= */
 
-.gallery-header {
+.gx-header {
   display: grid;
   grid-template-columns: 1fr 0.75fr;
   gap: 60px;
   align-items: end;
-  margin-bottom: 40px;
+  margin-bottom: 36px;
 }
 
-.gallery-label {
+.gx-label {
   margin: 0 0 13px;
 
-  color: var(--g-gold);
+  color: var(--gold);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.gallery-heading h2 {
+.gx-header h2 {
   margin: 0;
 
-  color: var(--g-green);
+  color: var(--head);
 
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(36px, 3.2vw, 52px);
@@ -55,62 +76,85 @@
   letter-spacing: -0.035em;
 }
 
-.gallery-intro {
+.gx-intro {
   max-width: 390px;
   justify-self: end;
-}
 
-.gallery-intro p {
   margin: 0;
 
-  color: var(--g-text);
+  color: var(--text);
   font-size: 12px;
   line-height: 1.75;
 }
 
 /* =========================
-   TABS
+   CATEGORY PILLS
 ========================= */
 
-.gallery-tabs {
-  display: flex;
-  gap: 40px;
+.gx-pills {
+  margin-bottom: 22px;
 
-  margin-bottom: 28px;
-
-  /* sideways scroll only when the tabs don't fit; never up/down */
   overflow-x: auto;
   overflow-y: hidden;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-
-  /* the grey base line is drawn inside the row, so nothing sticks out */
-  background: linear-gradient(var(--g-line), var(--g-line)) bottom / 100% 1px
-    no-repeat;
 }
 
-.gallery-tabs::-webkit-scrollbar {
+.gx-pills::-webkit-scrollbar {
   display: none;
 }
 
-.gallery-tab {
+.gx-pills-track {
   position: relative;
+
+  display: flex;
+  gap: 2px;
+
+  width: max-content;
+  padding: 4px;
+
+  border-radius: 999px;
+
+  background: var(--chip);
+}
+
+/* the highlight that slides under the active category */
+.gx-pill-active {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+
+  border-radius: 999px;
+
+  background: var(--pill-on);
+
+  box-shadow: 0 6px 16px rgba(10, 30, 22, 0.22);
+
+  transition:
+    left 0.5s cubic-bezier(0.34, 1.35, 0.5, 1),
+    width 0.5s cubic-bezier(0.34, 1.35, 0.5, 1);
+}
+
+.gx-pill {
+  position: relative;
+  z-index: 1;
 
   flex-shrink: 0;
 
-  padding: 0 0 16px;
+  padding: 11px 20px;
 
   border: 0;
+  border-radius: 999px;
 
   background: transparent;
 
-  color: var(--g-text);
+  color: var(--pill-text);
+
   font-family: inherit;
   font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
 
@@ -123,236 +167,435 @@
   transition: color 0.3s ease;
 }
 
-/* the count no longer changes the line height */
-.gallery-tab sup {
-  position: relative;
-  top: -0.35em;
+.gx-pill.is-active {
+  color: var(--pill-on-text);
+}
 
-  margin-left: 6px;
+.gx-pill sup {
+  position: relative;
+  top: -0.3em;
+
+  margin-left: 5px;
 
   vertical-align: baseline;
   line-height: 0;
 
-  color: var(--g-gold);
-  font-size: 9px;
-  letter-spacing: 0.06em;
+  font-size: 8.5px;
+  opacity: 0.7;
 }
 
-/* underline now sits INSIDE the row (bottom: 0), not outside it */
-.gallery-tab::after {
-  content: "";
-
-  position: absolute;
-  left: 0;
-  bottom: 0;
-
-  width: 100%;
-  height: 2px;
-
-  background: var(--g-green);
-
-  transform: scaleX(0);
-  transform-origin: left;
-
-  transition: transform 0.45s ease;
-}
-
-.gallery-tab:hover,
-.gallery-tab.is-active {
-  color: var(--g-green);
-}
-
-.gallery-tab.is-active::after {
-  transform: scaleX(1);
-}
-
-.gallery-tab:focus-visible,
-.gallery-tile:focus-visible,
-.gallery-tool:focus-visible,
-.gallery-arrow:focus-visible,
-.gallery-enquire:focus-visible {
-  outline: 2px solid var(--g-gold);
-  outline-offset: -2px;
+.gx-pill:focus-visible,
+.gx-stage:focus-visible,
+.gx-open:focus-visible,
+.gx-btn:focus-visible,
+.gx-thumb:focus-visible,
+.gx-v-btn:focus-visible,
+.gx-enquire:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 /* =========================
-   SCROLLABLE PANEL
+   STAGE
 ========================= */
 
-.gallery-scroll {
-  height: 640px; /* fixed, so every tab keeps the same section size */
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  /* room for the scrollbar so it doesn't touch the images */
-  padding-right: 10px;
-  margin-right: -10px;
-
-  /* keeps the grid width the same whether or not a scrollbar shows */
-  scrollbar-gutter: stable;
-
-  /* stops the page from scrolling when you reach the end of the box */
-  overscroll-behavior: contain;
-
-  scrollbar-width: thin;
-  scrollbar-color: var(--g-gold-soft) transparent;
-}
-
-.gallery-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.gallery-scroll::-webkit-scrollbar-thumb {
-  background: var(--g-gold-soft);
-  border-radius: 999px;
-}
-
-.gallery-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* =========================
-   MASONRY GRID
-========================= */
-
-.gallery-grid {
-  column-count: 3;
-  column-gap: 14px;
-
-  margin: 0;
-  padding: 0;
-
-  list-style: none;
-}
-
-.gallery-grid[data-count="few"] {
-  column-count: 2;
-}
-
-.gallery-grid > li {
-  display: block;
-
-  margin: 0 0 14px;
-
-  break-inside: avoid;
-
-  animation: galleryRise 0.7s ease both;
-  animation-delay: var(--d, 0s);
-}
-
-.gallery-tile {
+.gx-stage {
   position: relative;
 
+  width: 100%;
+  aspect-ratio: 16 / 8.6;
+
+  overflow: hidden;
+
+  border-radius: 22px;
+
+  background: var(--card);
+
+  box-shadow: var(--shadow);
+
+  outline: none;
+  touch-action: pan-y;
+
+  /* keeps rounded corners clipped while children transform (Safari) */
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+.gx-tilt {
+  position: absolute;
+  inset: -18px;
+
+  transform: translate3d(var(--tx, 0), var(--ty, 0), 0);
+
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.gx-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.gx-layer.is-prev {
+  z-index: 1;
+}
+
+.gx-layer.is-current {
+  z-index: 2;
+
+  animation: gxLayerIn 0.85s ease both;
+}
+
+/* the soft placeholder (next/image blurDataURL) shows while the photo
+   loads; the photo then sharpens into place */
+.gx-img {
+  object-fit: cover;
+
+  filter: blur(10px);
+
+  transition: filter 0.9s ease;
+
+  animation: gxKen 10s ease-out both;
+}
+
+.gx-img.is-loaded {
+  filter: none;
+}
+
+.gx-layer.is-prev .gx-img {
+  animation: none;
+}
+
+/* hidden images that only exist to be downloaded early */
+.gx-preload {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gx-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+
+  background:
+    linear-gradient(to top, rgba(8, 20, 15, 0.7), transparent 46%),
+    linear-gradient(to bottom, rgba(8, 20, 15, 0.28), transparent 26%);
+
+  pointer-events: none;
+}
+
+/* the whole stage is one big "open" button; controls sit above it */
+.gx-open {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  cursor: zoom-in;
+}
+
+/* "View" label that follows the mouse (desktop only) */
+.gx-cursor {
+  position: absolute;
+  z-index: 5;
+
+  padding: 9px 16px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.92);
+
+  color: #17372e;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .gx-stage:hover .gx-cursor {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.gx-caption {
+  position: absolute;
+  left: 28px;
+  right: 170px;
+  bottom: 28px;
+  z-index: 5;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  color: #ffffff;
+
+  pointer-events: none;
+}
+
+.gx-eyebrow {
+  display: inline-flex;
+  align-self: flex-start;
+
+  padding: 6px 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.14);
+
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gx-caption strong {
+  font-size: clamp(20px, 2.2vw, 30px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+
+  animation: gxRise 0.7s ease both;
+}
+
+/* ---------- round glass buttons ---------- */
+
+.gx-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.16);
+
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.gx-btn:hover {
+  background: #ffffff;
+
+  color: #17372e;
+}
+
+.gx-tools {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 6;
+
+  display: flex;
+  gap: 8px;
+}
+
+.gx-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+
+  width: 48px;
+  height: 48px;
+
+  opacity: 0;
+
+  transform: translateY(-50%);
+}
+
+.gx-nav-prev {
+  left: 18px;
+}
+
+.gx-nav-next {
+  right: 18px;
+}
+
+@media (hover: hover) {
+  .gx-stage:hover .gx-nav,
+  .gx-stage:focus-within .gx-nav {
+    opacity: 1;
+  }
+}
+
+.gx-nav:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+/* ---------- auto-play progress ---------- */
+
+.gx-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+
+  height: 3px;
+
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.gx-bar {
   display: block;
 
-  width: 100%;
-  aspect-ratio: var(--shape, 16 / 11);
+  width: 0;
+  height: 100%;
+
+  background: #c6a15b;
+
+  animation: gxProgress linear forwards;
+}
+
+.gx-bar.is-paused {
+  animation-play-state: paused;
+}
+
+/* =========================
+   FILM STRIP
+========================= */
+
+.gx-strip {
+  position: relative;
+
+  display: flex;
+  gap: 12px;
+
+  margin-top: 16px;
+  padding: 8px 2px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+
+  cursor: grab;
+
+  -webkit-user-select: none;
+  user-select: none;
+
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 22px,
+    #000 calc(100% - 22px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 22px,
+    #000 calc(100% - 22px),
+    transparent
+  );
+}
+
+.gx-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.gx-strip:active {
+  cursor: grabbing;
+}
+
+.gx-thumb {
+  position: relative;
+
+  flex: 0 0 auto;
+
+  width: 142px;
+  aspect-ratio: 4 / 3;
 
   padding: 0;
 
   overflow: hidden;
 
   border: 0;
-  border-radius: 12px;
+  border-radius: 13px;
 
-  background: var(--g-card);
+  background: var(--card);
 
-  cursor: zoom-in;
+  opacity: 0.55;
+
+  cursor: pointer;
+
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
-.gallery-tile-image {
+.gx-thumb:hover {
+  opacity: 0.9;
+}
+
+.gx-thumb.is-active {
+  opacity: 1;
+
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--gold),
+    0 12px 22px rgba(10, 30, 22, 0.22);
+}
+
+.gx-thumb-img {
   object-fit: cover;
 
-  transition: transform 0.8s ease;
+  pointer-events: none;
 }
 
-.gallery-tile:hover .gallery-tile-image,
-.gallery-tile:focus-visible .gallery-tile-image {
-  transform: scale(1.06);
+/* "swipe for more" hint: phones only */
+.gx-hint {
+  display: none;
+
+  margin: 4px 0 0;
+
+  color: var(--text);
+
+  font-size: 11px;
+  text-align: center;
 }
 
-/* caption that slides up on hover */
-
-.gallery-tile-overlay {
-  position: absolute;
-  inset: 0;
-
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-
-  padding: 16px;
-
-  background: linear-gradient(
-    to top,
-    rgba(10, 24, 19, 0.7),
-    rgba(10, 24, 19, 0.05) 55%
-  );
-
-  opacity: 0;
-
-  transition: opacity 0.35s ease;
-}
-
-.gallery-tile:hover .gallery-tile-overlay,
-.gallery-tile:focus-visible .gallery-tile-overlay {
-  opacity: 1;
-}
-
-.gallery-tile-caption {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  color: #ffffff;
-
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.3;
-  text-align: left;
-
-  transform: translateY(8px);
-
-  transition: transform 0.35s ease;
-}
-
-.gallery-tile-caption small {
-  color: rgba(255, 255, 255, 0.78);
-
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.gallery-tile:hover .gallery-tile-caption,
-.gallery-tile:focus-visible .gallery-tile-caption {
-  transform: translateY(0);
-}
-
-.gallery-tile-expand {
-  width: 34px;
-  height: 34px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  border-radius: 50%;
-
-  background: rgba(255, 255, 255, 0.92);
-
-  color: var(--g-green);
-}
-
-.gallery-note {
+.gx-note {
   margin: 14px 0 0;
 
-  color: #6c726a;
+  color: var(--text);
 
   font-size: 11.5px;
   text-align: center;
@@ -362,34 +605,34 @@
    VIDEOS
 ========================= */
 
-.gallery-videos {
+.gx-videos {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 
-  margin: 0 0 14px;
+  margin: 0;
   padding: 0;
 
   list-style: none;
 }
 
-.gallery-videos video {
+.gx-videos video {
   display: block;
 
   width: 100%;
   aspect-ratio: 16 / 9;
 
-  border-radius: 12px;
+  border-radius: 16px;
 
   background: #0f1d18;
 
   object-fit: cover;
 }
 
-.gallery-videos p {
+.gx-videos p {
   margin: 10px 2px 0;
 
-  color: var(--g-green);
+  color: var(--head);
 
   font-size: 14px;
   font-weight: 500;
@@ -399,7 +642,7 @@
    FULLSCREEN VIEWER
 ========================= */
 
-.gallery-viewer {
+.gx-viewer {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -409,10 +652,10 @@
 
   background: rgba(8, 18, 15, 0.97);
 
-  animation: galleryFade 0.25s ease;
+  animation: gxFade 0.25s ease;
 }
 
-.gallery-viewer-top {
+.gx-v-top {
   position: relative;
   z-index: 3;
 
@@ -424,7 +667,7 @@
   padding: 16px 22px;
 }
 
-.gallery-viewer-title {
+.gx-v-title {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -434,7 +677,7 @@
   color: #ffffff;
 }
 
-.gallery-viewer-title small {
+.gx-v-title small {
   color: rgba(255, 255, 255, 0.65);
 
   font-size: 10px;
@@ -442,12 +685,12 @@
   text-transform: uppercase;
 }
 
-.gallery-viewer-title strong {
+.gx-v-title strong {
   font-size: 15px;
   font-weight: 500;
 }
 
-.gallery-viewer-tools {
+.gx-v-tools {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -455,13 +698,13 @@
   flex-shrink: 0;
 }
 
-.gallery-tool {
-  width: 40px;
-  height: 40px;
-
+.gx-v-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  width: 40px;
+  height: 40px;
 
   padding: 0;
 
@@ -480,23 +723,21 @@
     opacity 0.25s ease;
 }
 
-.gallery-tool:hover:not(:disabled) {
+.gx-v-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.gallery-tool:disabled {
+.gx-v-btn:disabled {
   opacity: 0.35;
 
   cursor: default;
 }
 
-.gallery-tool-close {
+.gx-v-close {
   margin-left: 6px;
 }
 
-/* image area: pinch-zoom and drag happen here */
-
-.gallery-viewer-stage {
+.gx-v-stage {
   position: relative;
   z-index: 1;
 
@@ -512,7 +753,7 @@
   user-select: none;
 }
 
-.gallery-viewer-image {
+.gx-v-image {
   position: absolute;
   inset: 0;
 
@@ -521,11 +762,11 @@
   will-change: transform;
 }
 
-.gallery-viewer-image img {
+.gx-v-image img {
   object-fit: contain;
 }
 
-.gallery-arrow {
+.gx-v-arrow {
   position: absolute;
   top: 50%;
   z-index: 3;
@@ -533,39 +774,18 @@
   width: 46px;
   height: 46px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 0;
-
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-
-  background: rgba(255, 255, 255, 0.08);
-
-  color: #ffffff;
-
-  cursor: pointer;
-
   transform: translateY(-50%);
-
-  transition: background 0.25s ease;
 }
 
-.gallery-arrow:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.gallery-arrow-prev {
+.gx-v-prev {
   left: 20px;
 }
 
-.gallery-arrow-next {
+.gx-v-next {
   right: 20px;
 }
 
-.gallery-viewer-bottom {
+.gx-v-bottom {
   position: relative;
   z-index: 3;
 
@@ -577,7 +797,9 @@
   padding: 14px 22px 20px;
 }
 
-.gallery-enquire {
+/* ---------- WhatsApp enquiry button ---------- */
+
+.gx-enquire {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -597,11 +819,27 @@
   transition: background 0.25s ease;
 }
 
-.gallery-enquire:hover {
+.gx-enquire:hover {
   background: #b8924d;
 }
 
-.gallery-viewer-bottom p {
+/* same button, placed on the main stage (above .gx-open, which is z-index 4) */
+.gx-stage .gx-enquire--stage {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  z-index: 7;
+
+  gap: 10px;
+
+  padding: 11px 20px;
+
+  box-shadow: 0 10px 24px rgba(8, 20, 15, 0.35);
+
+  font-size: 12.5px;
+}
+
+.gx-v-bottom p {
   margin: 0;
 
   color: rgba(255, 255, 255, 0.55);
@@ -610,7 +848,7 @@
   text-align: center;
 }
 
-.gallery-viewer-bottom em {
+.gx-v-bottom em {
   color: #c6a15b;
 
   font-style: normal;
@@ -620,10 +858,30 @@
    ANIMATIONS
 ========================= */
 
-@keyframes galleryRise {
+@keyframes gxLayerIn {
   from {
     opacity: 0;
-    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gxKen {
+  from {
+    transform: scale(1.04);
+  }
+
+  to {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes gxRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 
   to {
@@ -632,7 +890,17 @@
   }
 }
 
-@keyframes galleryFade {
+@keyframes gxProgress {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes gxFade {
   from {
     opacity: 0;
   }
@@ -643,15 +911,23 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gallery-grid > li,
-  .gallery-viewer {
+  .gx-layer.is-current,
+  .gx-img,
+  .gx-caption strong,
+  .gx-viewer {
     animation: none;
   }
 
-  .gallery-tile-image,
-  .gallery-tile-overlay,
-  .gallery-tile-caption,
-  .gallery-viewer-image {
+  .gx-img {
+    filter: none;
+    transition: none;
+  }
+
+  .gx-tilt,
+  .gx-pill-active,
+  .gx-thumb,
+  .gx-cursor,
+  .gx-v-image {
     transition: none;
   }
 }
@@ -661,20 +937,24 @@
 ========================= */
 
 @media (max-width: 1000px) {
-  .gallery {
+  .gx {
     padding: 66px 0 72px;
   }
 
-  .gallery-container {
+  .gx-container {
     width: calc(100% - 70px);
   }
 
-  .gallery-header {
+  .gx-header {
     gap: 35px;
   }
 
-  .gallery-grid {
-    column-count: 2;
+  .gx-stage {
+    aspect-ratio: 16 / 10;
+  }
+
+  .gx-thumb {
+    width: 120px;
   }
 }
 
@@ -683,126 +963,147 @@
 ========================= */
 
 @media (max-width: 760px) {
-  .gallery {
+  .gx {
     padding: 58px 0 62px;
   }
 
-  .gallery-container {
+  .gx-container {
     width: calc(100% - 40px);
   }
 
-  .gallery-header {
+  .gx-header {
     display: block;
-    margin-bottom: 28px;
+    margin-bottom: 26px;
   }
 
-  .gallery-label {
+  .gx-label {
     margin-bottom: 11px;
     font-size: 9px;
   }
 
-  .gallery-heading h2 {
+  .gx-header h2 {
     font-size: 38px;
     line-height: 1.06;
   }
 
-  .gallery-intro {
+  .gx-intro {
     max-width: 100%;
     margin-top: 17px;
-  }
 
-  .gallery-intro p {
     font-size: 11px;
     line-height: 1.7;
   }
 
-  .gallery-tabs {
-    gap: 26px;
-
-    margin-bottom: 20px;
+  .gx-pills {
+    margin-right: -20px;
+    margin-bottom: 18px;
+    padding-right: 20px;
   }
 
-  .gallery-tab {
-    padding-bottom: 13px;
+  .gx-pill {
+    padding: 10px 16px;
 
     font-size: 10px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.1em;
   }
 
-  /* scroll window height on phones */
-  .gallery-scroll {
-    height: 70vh;
+  .gx-stage {
+    aspect-ratio: 4 / 4.3;
+
+    border-radius: 18px;
   }
 
-  .gallery-grid {
-    column-gap: 10px;
+  .gx-tilt {
+    inset: 0;
   }
 
-  .gallery-grid > li {
-    margin-bottom: 10px;
+  /* caption lifts up so the enquiry button can sit below it */
+  .gx-caption {
+    left: 16px;
+    right: 16px;
+    bottom: 72px;
   }
 
-  .gallery-tile {
-    border-radius: 10px;
+  .gx-caption strong {
+    font-size: 19px;
   }
 
-  /* no hover on touch screens: show a small caption strip instead */
-  .gallery-tile-overlay {
-    opacity: 1;
+  .gx-eyebrow {
+    padding: 5px 10px;
 
-    padding: 10px;
-
-    background: linear-gradient(
-      to top,
-      rgba(10, 24, 19, 0.62),
-      transparent 50%
-    );
+    font-size: 9px;
   }
 
-  .gallery-tile-caption {
-    font-size: 11.5px;
+  .gx-stage .gx-enquire--stage {
+    left: 16px;
+    right: 16px;
+    bottom: 18px;
 
-    transform: none;
+    justify-content: center;
+
+    padding: 12px 18px;
   }
 
-  .gallery-tile-caption small {
+  .gx-tools {
+    top: 12px;
+    right: 12px;
+  }
+
+  .gx-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* swipe replaces the arrows on touch screens */
+  .gx-nav {
     display: none;
   }
 
-  .gallery-tile-expand {
-    display: none;
+  .gx-strip {
+    gap: 9px;
+
+    margin-top: 12px;
   }
 
-  .gallery-videos {
+  .gx-thumb {
+    width: 88px;
+
+    border-radius: 11px;
+  }
+
+  .gx-hint {
+    display: block;
+  }
+
+  .gx-videos {
     grid-template-columns: 1fr;
   }
 
   /* viewer */
 
-  .gallery-viewer-top {
+  .gx-v-top {
     padding: 12px 14px;
   }
 
-  .gallery-viewer-title strong {
+  .gx-v-title strong {
     font-size: 13.5px;
   }
 
-  .gallery-tool {
+  .gx-v-btn {
     width: 36px;
     height: 36px;
   }
 
-  /* zoom buttons are not needed on phones: pinch instead */
-  .gallery-viewer-tools .gallery-tool:nth-child(1),
-  .gallery-viewer-tools .gallery-tool:nth-child(2) {
+  /* pinch replaces the zoom buttons */
+  .gx-v-zoom {
     display: none;
   }
 
-  .gallery-viewer-stage {
+  .gx-v-stage {
     margin: 0;
   }
 
-  .gallery-arrow {
+  .gx-v-arrow {
     top: auto;
     bottom: 96px;
 
@@ -812,19 +1113,19 @@
     transform: none;
   }
 
-  .gallery-arrow-prev {
+  .gx-v-prev {
     left: 14px;
   }
 
-  .gallery-arrow-next {
+  .gx-v-next {
     right: 14px;
   }
 
-  .gallery-viewer-bottom {
+  .gx-v-bottom {
     padding: 10px 14px 18px;
   }
 
-  .gallery-enquire {
+  .gx-v-bottom .gx-enquire {
     width: 100%;
     justify-content: center;
   }

@@ -1,142 +1,39 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import "./Gallery.css";
+import {
+  BLUR_DATA_URL,
+  allItems,
+  groups,
+  tabs,
+  videos,
+  type Item,
+} from "./gallery-data";
 
 /* =========================================
    ✏️  SETTINGS YOU CAN EDIT
+   (photos and captions live in gallery-data.ts)
    ========================================= */
 
-const IMG = "/images";
 const PHONE = "919977048537"; // WhatsApp number (digits only)
-
-type Item = {
-  src: string;
-  alt: string;
-  caption: string;
-  category: string;
-};
-
-type Group = {
-  id: string;
-  label: string;
-  items: Item[];
-};
-
-/*
-  Builds items like garden1.jpg ... garden7.jpg.
-  Give real captions in the same order as the image numbers, e.g.
-  captions: ["Central fountain", "Open-air stage", ...]
-  Any caption you leave out becomes "Garden view 3" etc.
-*/
-function build(
-  prefix: string,
-  count: number,
-  label: string,
-  altText: string,
-  captions: string[] = []
-): Item[] {
-  return Array.from({ length: count }, (_, i) => ({
-    src: `${IMG}/${prefix}${i + 1}.jpg`,
-    alt: `${altText} – ${captions[i] ?? `${label} view ${i + 1}`}`,
-    caption: captions[i] ?? `${label} view ${i + 1}`,
-    category: label,
-  }));
-}
-
-const groups: Group[] = [
-  {
-    id: "garden",
-    label: "Garden",
-    items: build(
-      "garden",
-      7,
-      "Garden",
-      "Landscaped garden at Vistara Valley, Khandwa Road, Khargone",
-      [] // ← add captions here
-    ),
-  },
-  {
-    id: "park",
-    label: "Park",
-    items: build(
-      "park",
-      2,
-      "Park",
-      "Park and play area at Vistara Valley, Khargone",
-      []
-    ),
-  },
-  {
-    id: "entrance",
-    label: "Entrance",
-    items: build(
-      "ent",
-      2,
-      "Entrance",
-      "Grand entrance gateway of Vistara Valley, Khargone",
-      []
-    ),
-  },
-  {
-    id: "amenities",
-    label: "Amenities",
-    items: build(
-      "ami",
-      6,
-      "Amenities",
-      "Amenities at Vistara Valley residential plots, Khargone",
-      []
-    ),
-  },
-];
-
-/*
-  🎬 Videos (optional). Put the files in /public/videos and /public/images.
-  Leave the list empty and the Videos tab stays hidden.
-
-  const videos = [
-    { src: "/videos/walkthrough.mp4", poster: "/images/video-poster.jpg", caption: "Drone view of Vistara Valley" },
-  ];
-*/
-type VideoItem = { src: string; poster?: string; caption: string };
-const videos: VideoItem[] = [];
-
-/* used only until an image finishes loading and we know its real shape */
-const FALLBACK_SHAPE = "4 / 3";
+const AUTOPLAY_MS = 6000; // time each image stays on the stage
+const DARK = false; // true = dark green "cinema" section
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/* mixes the categories so the "All" tab starts with variety */
-function interleave(lists: Item[][]): Item[] {
-  const result: Item[] = [];
-  const longest = Math.max(...lists.map((l) => l.length));
-
-  for (let i = 0; i < longest; i++) {
-    for (const list of lists) {
-      if (list[i]) result.push(list[i]);
-    }
-  }
-
-  return result;
-}
-
-const allItems = interleave(groups.map((g) => g.items));
-
-const tabs: { id: string; label: string; count: number }[] = [
-  { id: "all", label: "All", count: allItems.length },
-  ...groups.map((g) => ({ id: g.id, label: g.label, count: g.items.length })),
-  ...(videos.length
-    ? [{ id: "videos", label: "Videos", count: videos.length }]
-    : []),
-];
+const STAGE_SIZES = "(max-width: 760px) 100vw, (max-width: 1000px) 92vw, 1240px";
 
 /* ---------- icons ---------- */
 
-type IconProps = { children: React.ReactNode; size?: number };
-
-const Icon = ({ children, size = 18 }: IconProps) => (
+const Icon = ({
+  children,
+  size = 18,
+}: {
+  children: React.ReactNode;
+  size?: number;
+}) => (
   <svg
     viewBox="0 0 24 24"
     width={size}
@@ -169,8 +66,22 @@ const NextIcon = () => (
   </Icon>
 );
 const ExpandIcon = () => (
-  <Icon size={16}>
+  <Icon size={17}>
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Icon>
+);
+const PlayIcon = () => (
+  <Icon size={16}>
+    <path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none" />
+  </Icon>
+);
+const PauseIcon = () => (
+  <Icon size={16}>
+    <path
+      d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"
+      fill="currentColor"
+      stroke="none"
+    />
   </Icon>
 );
 const PlusIcon = () => (
@@ -205,18 +116,48 @@ const ShareIcon = () => (
 
 export default function Gallery() {
   const [tab, setTab] = useState("all");
-  const [open, setOpen] = useState<number | null>(null);
+  const [index, setIndex] = useState(0);
+  const [prevItem, setPrevItem] = useState<Item | null>(null);
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
 
+  const [playing, setPlaying] = useState(true);
+  const [hovering, setHovering] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [inView, setInView] = useState(false);
+  const [reduce, setReduce] = useState(false);
+  const [tabVisible, setTabVisible] = useState(true);
+
+  const [viewer, setViewer] = useState(false);
   const [scale, setScale] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [notice, setNotice] = useState("");
+  const [pill, setPill] = useState({ left: 0, width: 0 });
 
-  /* NEW: real width / height of each image, filled in as images load */
-  const [shapes, setShapes] = useState<Record<string, string>>({});
-
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const pillsRef = useRef<HTMLDivElement | null>(null);
+  const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tiltRef = useRef<HTMLDivElement | null>(null);
+  const cursorRef = useRef<HTMLSpanElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const viewerRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastFocus = useRef<HTMLElement | null>(null);
+
+  const swiped = useRef(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  const stripDrag = useRef({
+    active: false,
+    startX: 0,
+    startLeft: 0,
+    moved: 0,
+    lastX: 0,
+    lastT: 0,
+    v: 0,
+  });
+  const inertia = useRef(0);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef({ dist: 0, scale: 1 });
@@ -224,15 +165,28 @@ export default function Gallery() {
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const lastTap = useRef(0);
 
-  const list: Item[] =
-    tab === "all"
-      ? allItems
-      : groups.find((g) => g.id === tab)?.items ?? [];
+  const list: Item[] = useMemo(
+    () =>
+      tab === "all"
+        ? allItems
+        : groups.find((g) => g.id === tab)?.items ?? [],
+    [tab]
+  );
 
-  const item = open !== null ? list[open] : null;
   const total = list.length;
+  const item: Item | undefined = list[index] ?? list[0];
 
-  /* ---------- zoom helpers ---------- */
+  const running =
+    playing &&
+    !reduce &&
+    inView &&
+    tabVisible &&
+    !hovering &&
+    !dragging &&
+    !viewer &&
+    total > 1;
+
+  /* ---------- zoom helpers (fullscreen viewer) ---------- */
 
   const clampPos = useCallback((x: number, y: number, s: number) => {
     const el = frameRef.current;
@@ -263,42 +217,193 @@ export default function Gallery() {
 
   /* ---------- navigation ---------- */
 
-  const go = useCallback(
-    (direction: 1 | -1) => {
-      if (open === null || total === 0) return;
+  const select = useCallback(
+    (next: number) => {
+      if (!total) return;
+
+      const n = (next + total) % total;
+      if (n === index) return;
+
+      setPrevItem(item ?? null);
+      setIndex(n);
       resetZoom();
-      setOpen((open + direction + total) % total);
     },
-    [open, total, resetZoom]
+    [total, index, item, resetZoom]
   );
 
-  const openAt = (index: number) => {
-    resetZoom();
-    setOpen(index);
-  };
-
-  const close = useCallback(() => {
-    setOpen(null);
-    resetZoom();
-  }, [resetZoom]);
+  const go = useCallback((d: 1 | -1) => select(index + d), [select, index]);
 
   const changeTab = (id: string) => {
+    if (id === tab) return;
+
+    setPrevItem(item ?? null);
     setTab(id);
-    close();
-    scrollRef.current?.scrollTo({ top: 0 }); // start at the top on every tab
+    setIndex(0);
+    resetZoom();
   };
 
-  /* ---------- fullscreen: keyboard, scroll lock, focus ---------- */
+  const markLoaded = (src: string) =>
+    setLoaded((p) => (p[src] ? p : { ...p, [src]: true }));
+
+  /* ---------- open / close the fullscreen viewer ---------- */
+
+  const openViewer = useCallback(() => {
+    /* remember what had focus so we can give it back on close */
+    lastFocus.current = document.activeElement as HTMLElement | null;
+    setViewer(true);
+  }, []);
+
+  const closeViewer = useCallback(() => {
+    setViewer(false);
+    resetZoom();
+
+    /* remove the photo link from the address bar */
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search
+    );
+
+    window.setTimeout(() => lastFocus.current?.focus(), 0);
+  }, [resetZoom]);
+
+  /* ---------- environment: reduced motion, visibility ---------- */
 
   useEffect(() => {
-    if (open === null) return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduce(query.matches);
+
+    const onChange = (e: MediaQueryListEvent) => setReduce(e.matches);
+    query.addEventListener("change", onChange);
+
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.25 }
+    );
+
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, []);
+
+  /* pause the slideshow while the browser tab is in the background */
+  useEffect(() => {
+    const onVisibility = () =>
+      setTabVisible(document.visibilityState === "visible");
+
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  /* ---------- deep links: /#gallery-garden-3 ---------- */
+
+  useEffect(() => {
+    const match = window.location.hash.match(/^#gallery-([a-z]+)-(\d+)$/);
+    if (!match) return;
+
+    const [, id, num] = match;
+    const source =
+      id === "all" ? allItems : groups.find((g) => g.id === id)?.items;
+    if (!source || !source.length) return;
+
+    setTab(id);
+    setIndex(Math.min(Math.max(Number(num) - 1, 0), source.length - 1));
+    sectionRef.current?.scrollIntoView({ block: "start" });
+  }, []);
+
+  /* while the viewer is open, the address bar points at the current photo */
+  useEffect(() => {
+    if (!viewer) return;
+
+    window.history.replaceState(null, "", `#gallery-${tab}-${index + 1}`);
+  }, [viewer, tab, index]);
+
+  /* ---------- sliding category highlight ---------- */
+
+  const measure = useCallback(() => {
+    const el = pillRefs.current[tab];
+    if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [tab]);
+
+  useEffect(() => {
+    measure();
+
+    const el = pillRefs.current[tab];
+    const wrap = pillsRef.current;
+
+    if (el && wrap) {
+      wrap.scrollTo({
+        left: el.offsetLeft - (wrap.clientWidth - el.offsetWidth) / 2,
+        behavior: reduce ? "auto" : "smooth",
+      });
+    }
+  }, [measure, tab, reduce]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measure);
+    document.fonts?.ready.then(measure);
+
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
+  /* ---------- keep the active thumbnail centred in the strip ---------- */
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    const thumb = thumbRefs.current[index];
+
+    if (!strip || !thumb || stripDrag.current.active) return;
+
+    strip.scrollTo({
+      left: thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
+      behavior: reduce ? "auto" : "smooth",
+    });
+  }, [index, tab, reduce]);
+
+  /* ---------- fullscreen: keyboard, focus trap, scroll lock ---------- */
+
+  useEffect(() => {
+    if (!viewer) return;
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") closeViewer();
       if (event.key === "ArrowLeft") go(-1);
       if (event.key === "ArrowRight") go(1);
       if (event.key === "+" || event.key === "=") zoomTo(scale + 0.5);
       if (event.key === "-") zoomTo(scale - 0.5);
+
+      /* keep Tab inside the viewer */
+      if (event.key === "Tab") {
+        const root = viewerRef.current;
+        if (!root) return;
+
+        const focusable = Array.from(
+          root.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")
+        ).filter((el) => el.getClientRects().length > 0);
+
+        if (!focusable.length) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+
+        if (event.shiftKey && (active === first || !root.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !root.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
 
     document.body.style.overflow = "hidden";
@@ -309,9 +414,159 @@ export default function Gallery() {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, close, go, zoomTo, scale]);
+  }, [viewer, go, zoomTo, scale, closeViewer]);
 
-  /* ---------- touch + mouse gestures ---------- */
+  /* ---------- stage: hover tilt, "View" cursor, swipe ---------- */
+
+  const onStageMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const cursor = cursorRef.current;
+    if (cursor) {
+      cursor.style.left = `${e.clientX - rect.left}px`;
+      cursor.style.top = `${e.clientY - rect.top}px`;
+    }
+
+    if (reduce) return;
+
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+    const tilt = tiltRef.current;
+    if (tilt) {
+      tilt.style.setProperty("--tx", `${(-x * 18).toFixed(1)}px`);
+      tilt.style.setProperty("--ty", `${(-y * 12).toFixed(1)}px`);
+    }
+  };
+
+  const onStageEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse") setHovering(true);
+  };
+
+  const onStageLeave = () => {
+    setHovering(false);
+
+    const tilt = tiltRef.current;
+    if (tilt) {
+      tilt.style.setProperty("--tx", "0px");
+      tilt.style.setProperty("--ty", "0px");
+    }
+  };
+
+  const onStageTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    swiped.current = false;
+  };
+
+  const onStageTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 80) {
+      swiped.current = true;
+      go(dx > 0 ? -1 : 1);
+    }
+  };
+
+  const onStageKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") go(-1);
+    if (e.key === "ArrowRight") go(1);
+  };
+
+  /* a swipe is not a tap, so it must not open the viewer */
+  const onStageOpen = () => {
+    if (swiped.current) {
+      swiped.current = false;
+      return;
+    }
+
+    openViewer();
+  };
+
+  /* ---------- film strip: mouse drag with momentum ---------- */
+
+  const onStripDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+
+    const strip = stripRef.current;
+    if (!strip) return;
+
+    cancelAnimationFrame(inertia.current);
+
+    stripDrag.current = {
+      active: true,
+      startX: e.clientX,
+      startLeft: strip.scrollLeft,
+      moved: 0,
+      lastX: e.clientX,
+      lastT: performance.now(),
+      v: 0,
+    };
+
+    setDragging(true);
+  };
+
+  const onStripMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = stripDrag.current;
+    const strip = stripRef.current;
+
+    if (!d.active || !strip) return;
+
+    const dx = e.clientX - d.startX;
+
+    strip.scrollLeft = d.startLeft - dx;
+    d.moved = Math.max(d.moved, Math.abs(dx));
+
+    const now = performance.now();
+    const dt = Math.max(now - d.lastT, 1);
+
+    d.v = ((d.lastX - e.clientX) / dt) * 16;
+    d.lastX = e.clientX;
+    d.lastT = now;
+  };
+
+  const endStripDrag = () => {
+    const d = stripDrag.current;
+    const strip = stripRef.current;
+
+    if (!d.active) return;
+
+    d.active = false;
+    setDragging(false);
+
+    if (!strip || Math.abs(d.v) < 0.6) return;
+
+    let v = d.v;
+
+    const step = () => {
+      strip.scrollLeft += v;
+      v *= 0.94;
+
+      if (Math.abs(v) > 0.3) inertia.current = requestAnimationFrame(step);
+    };
+
+    inertia.current = requestAnimationFrame(step);
+  };
+
+  useEffect(() => () => cancelAnimationFrame(inertia.current), []);
+
+  const onThumbClick = (i: number) => {
+    /* a drag is not a click */
+    if (stripDrag.current.moved > 6) {
+      stripDrag.current.moved = 0;
+      return;
+    }
+
+    select(i);
+  };
+
+  /* ---------- fullscreen gestures ---------- */
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -341,7 +596,8 @@ export default function Gallery() {
     /* double tap / double click toggles zoom */
     const now = Date.now();
     if (now - lastTap.current < 300) {
-      scale > 1 ? resetZoom() : zoomTo(2.5);
+      if (scale > 1) resetZoom();
+      else zoomTo(2.5);
       lastTap.current = 0;
     } else {
       lastTap.current = now;
@@ -364,12 +620,13 @@ export default function Gallery() {
     }
 
     if (scale > 1) {
-      const next = clampPos(
-        drag.current.px + (event.clientX - drag.current.x),
-        drag.current.py + (event.clientY - drag.current.y),
-        scale
+      setPos(
+        clampPos(
+          drag.current.px + (event.clientX - drag.current.x),
+          drag.current.py + (event.clientY - drag.current.y),
+          scale
+        )
       );
-      setPos(next);
     }
   };
 
@@ -395,12 +652,12 @@ export default function Gallery() {
     zoomTo(scale - event.deltaY * 0.002);
   };
 
-  /* ---------- share ---------- */
+  /* ---------- share (sends a link straight to this photo) ---------- */
 
   const share = async () => {
     if (!item) return;
 
-    const url = `${window.location.origin}${item.src}`;
+    const url = `${window.location.origin}${window.location.pathname}${window.location.search}#gallery-${tab}-${index + 1}`;
 
     try {
       if (navigator.share) {
@@ -425,14 +682,32 @@ export default function Gallery() {
       )}`
     : "#";
 
+  /* next + previous images, de-duplicated so a 2-photo tab
+     (where next === previous) never produces the same React key twice */
+  const neighbours = Array.from(
+    new Set([
+      list[(index + 1) % (total || 1)],
+      list[(index - 1 + total) % (total || 1)],
+    ])
+  ).filter((n): n is Item => Boolean(n) && n !== item);
+
+  /* =========================================
+     RENDER
+     ========================================= */
+
   return (
-    <section className="gallery" id="gallery" aria-labelledby="gallery-title">
-      <div className="gallery-container">
+    <section
+      ref={sectionRef}
+      className={`gx ${DARK ? "gx--dark" : ""}`}
+      id="gallery"
+      aria-labelledby="gallery-title"
+    >
+      <div className="gx-container">
         {/* HEADER */}
 
-        <div className="gallery-header">
-          <div className="gallery-heading">
-            <p className="gallery-label">VISTARA VALLEY</p>
+        <div className="gx-header">
+          <div>
+            <p className="gx-label">VISTARA VALLEY</p>
 
             <h2 id="gallery-title">
               A Glimpse Into
@@ -441,125 +716,277 @@ export default function Gallery() {
             </h2>
           </div>
 
-          <div className="gallery-intro">
-            <p>
-              Explore the gardens, parks, entrance and amenities that make
-              Vistara Valley a distinctive destination on Khandwa Road,
-              Khargone.
-            </p>
+          <p className="gx-intro">
+            Explore the gardens, parks, entrance and amenities that make
+            Vistara Valley a distinctive destination on Khandwa Road,
+            Khargone.
+          </p>
+        </div>
+
+        {/* CATEGORY PILLS */}
+
+        <div className="gx-pills" ref={pillsRef}>
+          <div
+            className="gx-pills-track"
+            role="tablist"
+            aria-label="Gallery categories"
+          >
+            <span
+              className="gx-pill-active"
+              aria-hidden="true"
+              style={{ left: pill.left, width: pill.width }}
+            />
+
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                ref={(el) => {
+                  pillRefs.current[t.id] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`gallery-tab-${t.id}`}
+                aria-selected={tab === t.id}
+                aria-controls="gallery-panel"
+                className={`gx-pill ${tab === t.id ? "is-active" : ""}`}
+                onClick={() => changeTab(t.id)}
+              >
+                {t.label}
+                <sup>{pad(t.count)}</sup>
+              </button>
+            ))}
           </div>
         </div>
-
-        {/* TABS */}
-
-        <div
-          className="gallery-tabs"
-          role="tablist"
-          aria-label="Gallery categories"
-        >
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              id={`gallery-tab-${t.id}`}
-              aria-selected={tab === t.id}
-              aria-controls="gallery-panel"
-              className={`gallery-tab ${tab === t.id ? "is-active" : ""}`}
-              onClick={() => changeTab(t.id)}
-            >
-              {t.label}
-              <sup>{pad(t.count)}</sup>
-            </button>
-          ))}
-        </div>
-
-        {/* GRID */}
 
         <div
           id="gallery-panel"
           role="tabpanel"
           aria-labelledby={`gallery-tab-${tab}`}
         >
-          {/* fixed-height scroll window around the grid / videos */}
-          <div className="gallery-scroll" ref={scrollRef}>
-            {tab === "videos" ? (
-              <ul className="gallery-videos" key="videos">
-                {videos.map((video) => (
-                  <li key={video.src}>
-                    <video
-                      controls
-                      playsInline
-                      preload="metadata"
-                      poster={video.poster}
-                      src={video.src}
-                    />
-                    <p>{video.caption}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <ul
-                className="gallery-grid"
-                key={tab}
-                data-count={list.length <= 2 ? "few" : "many"}
-              >
-                {list.map((entry, index) => (
-                  <li
-                    key={entry.src}
-                    style={
-                      {
-                        /* NEW: card shape follows the real image shape */
-                        "--shape": shapes[entry.src] ?? FALLBACK_SHAPE,
-                        "--d": `${Math.min(index, 8) * 0.05}s`,
-                      } as React.CSSProperties
-                    }
+          {tab === "videos" ? (
+            <ul className="gx-videos">
+              {videos.map((video) => (
+                <li key={video.src}>
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={video.poster}
+                    src={video.src}
+                  />
+                  <p>{video.caption}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            item && (
+              <>
+                {/* STAGE */}
+
+                <div
+                  className="gx-stage"
+                  tabIndex={0}
+                  aria-roledescription="carousel"
+                  aria-label="Featured image"
+                  onKeyDown={onStageKey}
+                  onPointerEnter={onStageEnter}
+                  onPointerMove={onStageMove}
+                  onPointerLeave={onStageLeave}
+                  onTouchStart={onStageTouchStart}
+                  onTouchEnd={onStageTouchEnd}
+                >
+                  <div className="gx-tilt" ref={tiltRef}>
+                    {prevItem && prevItem.src !== item.src && (
+                      <div className="gx-layer is-prev" aria-hidden="true">
+                        <Image
+                          src={prevItem.src}
+                          alt=""
+                          fill
+                          sizes={STAGE_SIZES}
+                          placeholder="blur"
+                          blurDataURL={BLUR_DATA_URL}
+                          style={{ objectPosition: prevItem.position }}
+                          className="gx-img is-loaded"
+                        />
+                      </div>
+                    )}
+
+                    <div
+                      key={item.src}
+                      className="gx-layer is-current"
+                      onAnimationEnd={(e) => {
+                        if (e.target === e.currentTarget) setPrevItem(null);
+                      }}
+                    >
+                      <Image
+                        src={item.src}
+                        alt={item.alt}
+                        fill
+                        sizes={STAGE_SIZES}
+                        priority={tab === "all" && index === 0}
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        style={{ objectPosition: item.position }}
+                        className={`gx-img ${loaded[item.src] ? "is-loaded" : ""}`}
+                        onLoad={() => markLoaded(item.src)}
+                        ref={(el) => {
+                          if (el && el.complete && el.naturalWidth) {
+                            markLoaded(item.src);
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* load the next and previous image ahead of time */}
+                    {neighbours.map((n) => (
+                      <Image
+                        key={n.src}
+                        src={n.src}
+                        alt=""
+                        aria-hidden="true"
+                        fill
+                        sizes={STAGE_SIZES}
+                        className="gx-preload"
+                      />
+                    ))}
+                  </div>
+
+                  <div className="gx-shade" aria-hidden="true" />
+
+                  <button
+                    type="button"
+                    className="gx-open"
+                    onClick={onStageOpen}
+                    aria-label={`Open ${item.caption} fullscreen`}
+                  />
+
+                  <span className="gx-cursor" ref={cursorRef} aria-hidden="true">
+                    View
+                  </span>
+
+                  <div className="gx-caption" aria-live="polite">
+                    <span className="gx-eyebrow">
+                      {item.category} · {pad(index + 1)} / {pad(total)}
+                    </span>
+                    <strong>{item.caption}</strong>
+                  </div>
+
+                  {/* enquiry button: visible to everyone, not only in fullscreen */}
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gx-enquire gx-enquire--stage"
                   >
+                    Enquire
+                    <span aria-hidden="true">→</span>
+                  </a>
+
+                  <div className="gx-tools">
+                    {total > 1 && (
+                      <button
+                        type="button"
+                        className="gx-btn"
+                        onClick={() => setPlaying((p) => !p)}
+                        aria-label={playing ? "Pause slideshow" : "Play slideshow"}
+                      >
+                        {playing ? <PauseIcon /> : <PlayIcon />}
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      className="gallery-tile"
-                      onClick={() => openAt(index)}
-                      aria-label={`Open ${entry.caption}`}
+                      className="gx-btn"
+                      onClick={openViewer}
+                      aria-label="View fullscreen"
+                    >
+                      <ExpandIcon />
+                    </button>
+                  </div>
+
+                  {total > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="gx-btn gx-nav gx-nav-prev"
+                        onClick={() => go(-1)}
+                        aria-label="Previous image"
+                      >
+                        <PrevIcon />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="gx-btn gx-nav gx-nav-next"
+                        onClick={() => go(1)}
+                        aria-label="Next image"
+                      >
+                        <NextIcon />
+                      </button>
+                    </>
+                  )}
+
+                  {playing && !reduce && total > 1 && (
+                    <span className="gx-progress" aria-hidden="true">
+                      <span
+                        key={`${tab}-${index}`}
+                        className={`gx-bar ${running ? "" : "is-paused"}`}
+                        style={{ animationDuration: `${AUTOPLAY_MS}ms` }}
+                        onAnimationEnd={() => go(1)}
+                      />
+                    </span>
+                  )}
+                </div>
+
+                {/* FILM STRIP */}
+
+                <div
+                  className="gx-strip"
+                  ref={stripRef}
+                  onPointerDown={onStripDown}
+                  onPointerMove={onStripMove}
+                  onPointerUp={endStripDrag}
+                  onPointerLeave={endStripDrag}
+                  onPointerCancel={endStripDrag}
+                  onDragStart={(e) => e.preventDefault()}
+                >
+                  {list.map((entry, i) => (
+                    <button
+                      key={entry.src}
+                      ref={(el) => {
+                        thumbRefs.current[i] = el;
+                      }}
+                      type="button"
+                      className={`gx-thumb ${i === index ? "is-active" : ""}`}
+                      onClick={() => onThumbClick(i)}
+                      aria-label={`Show ${entry.caption}`}
+                      aria-current={i === index}
                     >
                       <Image
                         src={entry.src}
-                        alt={entry.alt}
+                        alt=""
                         fill
-                        sizes="(max-width: 760px) 50vw, (max-width: 1000px) 46vw, 410px"
-                        priority={index < 3}
-                        className="gallery-tile-image"
-                        /* NEW: read the real size once the image loads */
-                        onLoad={(e) => {
-                          const { naturalWidth: w, naturalHeight: h } =
-                            e.currentTarget;
-                          if (!w || !h) return;
-                          setShapes((prev) =>
-                            prev[entry.src]
-                              ? prev
-                              : { ...prev, [entry.src]: `${w} / ${h}` }
-                          );
-                        }}
+                        sizes="140px"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        style={{ objectPosition: entry.position }}
+                        draggable={false}
+                        className="gx-thumb-img"
                       />
-
-                      <span className="gallery-tile-overlay">
-                        <span className="gallery-tile-caption">
-                          <small>{entry.category}</small>
-                          {entry.caption}
-                        </span>
-
-                        <span className="gallery-tile-expand">
-                          <ExpandIcon />
-                        </span>
-                      </span>
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                  ))}
+                </div>
 
-          {/* stays outside the scroll window, always visible */}
-          <p className="gallery-note">
+                {total > 3 && (
+                  <p className="gx-hint" aria-hidden="true">
+                    Swipe the thumbnails for more →
+                  </p>
+                )}
+              </>
+            )
+          )}
+
+          <p className="gx-note">
             Images are artistic impressions. The actual development may vary.
           </p>
         </div>
@@ -567,25 +994,26 @@ export default function Gallery() {
 
       {/* FULLSCREEN VIEWER */}
 
-      {item && (
+      {viewer && item && (
         <div
-          className="gallery-viewer"
+          className="gx-viewer"
+          ref={viewerRef}
           role="dialog"
           aria-modal="true"
           aria-label={item.caption}
         >
-          <div className="gallery-viewer-top">
-            <div className="gallery-viewer-title">
+          <div className="gx-v-top">
+            <div className="gx-v-title">
               <small>
-                {item.category} · {pad((open ?? 0) + 1)} / {pad(total)}
+                {item.category} · {pad(index + 1)} / {pad(total)}
               </small>
               <strong>{item.caption}</strong>
             </div>
 
-            <div className="gallery-viewer-tools">
+            <div className="gx-v-tools">
               <button
                 type="button"
-                className="gallery-tool"
+                className="gx-v-btn gx-v-zoom"
                 onClick={() => zoomTo(scale - 0.5)}
                 aria-label="Zoom out"
                 disabled={scale <= 1}
@@ -595,7 +1023,7 @@ export default function Gallery() {
 
               <button
                 type="button"
-                className="gallery-tool"
+                className="gx-v-btn gx-v-zoom"
                 onClick={() => zoomTo(scale + 0.5)}
                 aria-label="Zoom in"
                 disabled={scale >= 4}
@@ -605,7 +1033,7 @@ export default function Gallery() {
 
               <button
                 type="button"
-                className="gallery-tool"
+                className="gx-v-btn"
                 onClick={share}
                 aria-label="Share this image"
               >
@@ -613,7 +1041,7 @@ export default function Gallery() {
               </button>
 
               <a
-                className="gallery-tool"
+                className="gx-v-btn"
                 href={item.src}
                 download
                 aria-label="Download this image"
@@ -624,8 +1052,8 @@ export default function Gallery() {
               <button
                 ref={closeRef}
                 type="button"
-                className="gallery-tool gallery-tool-close"
-                onClick={close}
+                className="gx-v-btn gx-v-close"
+                onClick={closeViewer}
                 aria-label="Close gallery"
               >
                 <CloseIcon />
@@ -634,7 +1062,7 @@ export default function Gallery() {
           </div>
 
           <div
-            className="gallery-viewer-stage"
+            className="gx-v-stage"
             ref={frameRef}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -643,7 +1071,7 @@ export default function Gallery() {
             onWheel={onWheel}
           >
             <div
-              className="gallery-viewer-image"
+              className="gx-v-image"
               style={{
                 transform: `translate3d(${pos.x}px, ${pos.y}px, 0) scale(${scale})`,
                 cursor: scale > 1 ? "grab" : "zoom-in",
@@ -656,6 +1084,8 @@ export default function Gallery() {
                 fill
                 sizes="100vw"
                 quality={90}
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
                 draggable={false}
               />
             </div>
@@ -663,7 +1093,7 @@ export default function Gallery() {
 
           <button
             type="button"
-            className="gallery-arrow gallery-arrow-prev"
+            className="gx-v-btn gx-v-arrow gx-v-prev"
             onClick={() => go(-1)}
             aria-label="Previous image"
           >
@@ -672,19 +1102,19 @@ export default function Gallery() {
 
           <button
             type="button"
-            className="gallery-arrow gallery-arrow-next"
+            className="gx-v-btn gx-v-arrow gx-v-next"
             onClick={() => go(1)}
             aria-label="Next image"
           >
             <NextIcon />
           </button>
 
-          <div className="gallery-viewer-bottom">
+          <div className="gx-v-bottom">
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="gallery-enquire"
+              className="gx-enquire"
             >
               Enquire on WhatsApp
               <span aria-hidden="true">→</span>
