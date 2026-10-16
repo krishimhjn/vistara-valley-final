@@ -31,7 +31,7 @@ const DARK = false; // true = dark green "cinema" section
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /* how long a swipe takes to settle (ms) */
-const SLIDE_MS = 320;
+const SLIDE_MS = 300;
 
 /* layout effect that is safe during server rendering */
 const useIsoLayoutEffect =
@@ -143,7 +143,7 @@ export default function Gallery() {
   const [tab, setTab] = useState("all");
   const [index, setIndex] = useState(0);
   const [prevItem, setPrevItem] = useState<Item | null>(null);
-  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
+  const [fadeSrc, setFadeSrc] = useState<string | null>(null);
 
   const [playing, setPlaying] = useState(true);
   const [hovering, setHovering] = useState(false);
@@ -151,7 +151,6 @@ export default function Gallery() {
   const [inView, setInView] = useState(false);
   const [reduce, setReduce] = useState(false);
   const [tabVisible, setTabVisible] = useState(true);
-  const [instant, setInstant] = useState(false);
 
   const [viewer, setViewer] = useState(false);
   const [scale, setScale] = useState(1);
@@ -254,54 +253,68 @@ export default function Gallery() {
 
   /* ---------- navigation ---------- */
 
-  const select = useCallback(
-    (next: number, noFade = false) => {
+  /* the three photos that exist at any moment: previous, current, next.
+     They are listed in a fixed order (by position in the gallery) and keyed
+     by image, so when you move on, React keeps the same <img> elements and
+     only changes their role. Nothing is re-created, so nothing can flicker. */
+  const slides = useMemo(() => {
+    if (!total) return [];
+
+    const make = (i: number, role: -1 | 0 | 1) => ({
+      it: list[(i + total) % total],
+      i: (i + total) % total,
+      role,
+    });
+
+    const cur = make(index, 0);
+    if (total === 1) return [cur];
+
+    const next = make(index + 1, 1);
+    if (total === 2) return [cur, next].sort((x, y) => x.i - y.i);
+
+    return [make(index - 1, -1), cur, next].sort((x, y) => x.i - y.i);
+  }, [list, index, total]);
+
+  /* moves to photo n with no animation of its own
+     (fade = cross-fade from the old photo, used for far jumps) */
+  const commit = useCallback(
+    (n: number, fade: boolean) => {
       if (!total) return;
 
-      const n = (next + total) % total;
-      if (n === index) return;
+      const t = (n + total) % total;
+      if (t === index) return;
 
-      /* after a finger swipe the new photo is already on screen,
-         so there is nothing to cross-fade */
-      setInstant(noFade);
-      setPrevItem(noFade ? null : item ?? null);
-      setIndex(n);
+      setPrevItem(fade ? item ?? null : null);
+      setFadeSrc(fade ? list[t]?.src ?? null : null);
+      setIndex(t);
       resetZoom();
     },
-    [total, index, item, resetZoom]
+    [total, index, item, list, resetZoom]
   );
 
-  const go = useCallback(
-    (d: 1 | -1, noFade = false) => select(index + d, noFade),
-    [select, index]
-  );
+  const stepNow = useCallback((d: 1 | -1) => commit(index + d, false), [commit, index]);
 
-  const goRef = useRef(go);
+  /* ---------- sliding animation (used by swipe, arrows, autoplay) ---------- */
+
+  const stepNowRef = useRef(stepNow);
+  const slideRef = useRef<(d: 1 | -1) => void>(() => {});
+
   useEffect(() => {
-    goRef.current = go;
+    stepNowRef.current = stepNow;
   });
 
-  const changeTab = (id: string) => {
-    if (id === tab) return;
-
-    setInstant(false);
-    setPrevItem(item ?? null);
-    setTab(id);
-    setIndex(0);
-    resetZoom();
-  };
-
-  const markLoaded = (src: string) =>
-    setLoaded((p) => (p[src] ? p : { ...p, [src]: true }));
-
-  /* ---------- finger-following swipe ---------- */
-
-  /* slides `el` away (dir = ±1) or back to the middle (dir = 0) */
+  /* slides `el` away (dir = ±1) or back to the middle (dir = 0) and,
+     when it has finished, switches to the new photo */
   const settle = (el: HTMLElement | null, dir: -1 | 0 | 1, width: number) => {
     const ms = reduce ? 0 : SLIDE_MS;
 
+    const finish = () => {
+      if (dir) stepNowRef.current(dir);
+      else busy.current = false;
+    };
+
     if (!el) {
-      if (dir) goRef.current(dir, true);
+      finish();
       return;
     }
 
@@ -309,22 +322,94 @@ export default function Gallery() {
     el.style.transition = ms
       ? `transform ${ms}ms cubic-bezier(0.22, 0.8, 0.24, 1)`
       : "none";
-    el.style.transform = `translate3d(${-dir * width}px, 0, 0)`;
+    el.style.transform = `translate3d(${dir ? -dir * width : 0}px, 0, 0)`;
 
-    window.setTimeout(() => {
-      if (dir) goRef.current(dir, true);
-      else busy.current = false;
-    }, ms);
+    let done = false;
+    const end = () => {
+      if (done) return;
+      done = true;
+      el.removeEventListener("transitionend", onEnd);
+      finish();
+    };
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target === el && e.propertyName === "transform") end();
+    };
+
+    el.addEventListener("transitionend", onEnd);
+    window.setTimeout(end, ms + 80);
   };
 
-  /* once the new photo is in place, put the sliding track back at 0
-     before the browser paints, so there is no visible jump */
+  /* with only two photos the "other" one can be on either side */
+  const placeOther = (root: HTMLElement | null, selector: string, dx: number) => {
+    if (total !== 2 || !root) return;
+
+    const other = root.querySelector<HTMLElement>(selector);
+    if (other) other.style.transform = `translate3d(${dx > 0 ? -100 : 100}%, 0, 0)`;
+  };
+
+  slideRef.current = (d: 1 | -1) => {
+    if (total < 2 || busy.current) return;
+
+    const el = viewer ? vTrackRef.current : dragRef.current;
+    const width = (viewer ? frameRef.current : dragRef.current)?.clientWidth || 0;
+
+    if (!el || !width || reduce) {
+      stepNowRef.current(d);
+      return;
+    }
+
+    if (viewer) placeOther(el, ".gx-v-slide.is-next", -d);
+    else placeOther(el, ".gx-slide.is-next", -d);
+
+    settle(el, d, width);
+  };
+
+  /* arrows, keys and autoplay all slide */
+  const go = useCallback((d: 1 | -1) => slideRef.current(d), []);
+
+  /* thumbnails: slide when the photo is next door, cross-fade for far jumps */
+  const select = (i: number) => {
+    if (!total || i === index) return;
+
+    const n = (i + total) % total;
+
+    if (n === (index + 1) % total) go(1);
+    else if (n === (index - 1 + total) % total) go(-1);
+    else commit(n, true);
+  };
+
+  const changeTab = (id: string) => {
+    if (id === tab) return;
+
+    const nextList =
+      id === "all" ? allItems : groups.find((g) => g.id === id)?.items ?? [];
+    const first = nextList[0];
+    const fade = Boolean(first) && first.src !== item?.src;
+
+    setPrevItem(fade ? item ?? null : null);
+    setFadeSrc(fade ? first.src : null);
+    setTab(id);
+    setIndex(0);
+    resetZoom();
+  };
+
+  /* once the new photo is in place, put the sliding track back at 0 before
+     the browser paints. The photo that was waiting at the side becomes the
+     centre one in the same instant, so the picture does not move at all. */
   useIsoLayoutEffect(() => {
     [dragRef.current, vTrackRef.current].forEach((el) => {
       if (!el) return;
+
       el.style.transition = "none";
       el.style.transform = "";
+
+      el.querySelectorAll<HTMLElement>(".gx-slide, .gx-v-slide").forEach(
+        (slide) => {
+          slide.style.transform = "";
+        }
+      );
     });
+
     busy.current = false;
   }, [index, tab]);
 
@@ -489,15 +574,22 @@ export default function Gallery() {
       }
     };
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
+
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewer, go, zoomTo, scale, closeViewer]);
+
+  /* lock page scroll and move focus into the viewer (only when it opens) */
+  useEffect(() => {
+    if (!viewer) return;
+
+    document.body.style.overflow = "hidden";
     closeRef.current?.focus();
 
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
     };
-  }, [viewer, go, zoomTo, scale, closeViewer]);
+  }, [viewer]);
 
   /* ---------- stage: hover tilt, "View" cursor, swipe ---------- */
 
@@ -572,6 +664,7 @@ export default function Gallery() {
 
     s.dx = dx;
     swiped.current = true;
+    placeOther(el, ".gx-slide.is-next", dx);
     el.style.transition = "none";
     el.style.transform = `translate3d(${dx}px, 0, 0)`;
   };
@@ -772,6 +865,7 @@ export default function Gallery() {
     }
 
     if (vLock.current === "x") {
+      placeOther(track, ".gx-v-slide.is-next", dx);
       track.style.transition = "none";
       track.style.transform = `translate3d(${dx}px, 0, 0)`;
     }
@@ -840,12 +934,6 @@ export default function Gallery() {
         `Hello Vistara Valley team, I saw "${item.caption}" on your website and I'm interested in the plots. Please share the details and help me book a site visit.`
       )}`
     : "#";
-
-  /* the photos on either side, shown while swiping.
-     (with only 2 photos both sides are the same picture, which is fine
-     because each slide has its own fixed key: "prev" / "next") */
-  const prevNb = total > 1 ? list[(index - 1 + total) % total] : undefined;
-  const nextNb = total > 1 ? list[(index + 1) % total] : undefined;
 
   /* =========================================
      RENDER
@@ -955,76 +1043,51 @@ export default function Gallery() {
                 >
                   <div className="gx-tilt" ref={tiltRef}>
                     <div className="gx-drag" ref={dragRef}>
-                    {prevNb && (
-                      <div className="gx-slide is-prev" aria-hidden="true">
-                        <Image
-                          src={prevNb.src}
-                          alt=""
-                          fill
-                          sizes={STAGE_SIZES}
-                          loading="eager"
-                          style={{ objectPosition: prevNb.position }}
-                          className="gx-img is-loaded"
-                          onLoad={() => markLoaded(prevNb.src)}
-                        />
-                      </div>
-                    )}
+                      {/* old photo fading out (only after a far jump) */}
+                      {prevItem && prevItem.src !== item.src && (
+                        <div key="ghost" className="gx-layer" aria-hidden="true">
+                          <Image
+                            src={prevItem.src}
+                            alt=""
+                            fill
+                            sizes={STAGE_SIZES}
+                            placeholder="blur"
+                            blurDataURL={BLUR_DATA_URL}
+                            style={{ objectPosition: prevItem.position }}
+                            className="gx-img"
+                          />
+                        </div>
+                      )}
 
-                    {prevItem && prevItem.src !== item.src && (
-                      <div className="gx-layer is-prev" aria-hidden="true">
-                        <Image
-                          src={prevItem.src}
-                          alt=""
-                          fill
-                          sizes={STAGE_SIZES}
-                          placeholder="blur"
-                          blurDataURL={BLUR_DATA_URL}
-                          style={{ objectPosition: prevItem.position }}
-                          className="gx-img is-loaded"
-                        />
-                      </div>
-                    )}
+                      {slides.map(({ it, role }) => {
+                        const cur = role === 0;
 
-                    <div
-                      key={item.src}
-                      className={`gx-layer is-current ${instant ? "is-instant" : ""}`}
-                      onAnimationEnd={(e) => {
-                        if (e.target === e.currentTarget) setPrevItem(null);
-                      }}
-                    >
-                      <Image
-                        src={item.src}
-                        alt={item.alt}
-                        fill
-                        sizes={STAGE_SIZES}
-                        priority={tab === "all" && index === 0}
-                        placeholder="blur"
-                        blurDataURL={BLUR_DATA_URL}
-                        style={{ objectPosition: item.position }}
-                        className={`gx-img ${loaded[item.src] ? "is-loaded" : ""}`}
-                        onLoad={() => markLoaded(item.src)}
-                        ref={(el) => {
-                          if (el && el.complete && el.naturalWidth) {
-                            markLoaded(item.src);
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {nextNb && (
-                      <div className="gx-slide is-next" aria-hidden="true">
-                        <Image
-                          src={nextNb.src}
-                          alt=""
-                          fill
-                          sizes={STAGE_SIZES}
-                          loading="eager"
-                          style={{ objectPosition: nextNb.position }}
-                          className="gx-img is-loaded"
-                          onLoad={() => markLoaded(nextNb.src)}
-                        />
-                      </div>
-                    )}
+                        return (
+                          <div
+                            key={it.src}
+                            className={`gx-slide ${
+                              cur ? "is-cur" : role < 0 ? "is-prev" : "is-next"
+                            } ${cur && fadeSrc === it.src ? "is-fade" : ""}`}
+                            aria-hidden={cur ? undefined : true}
+                            onAnimationEnd={(e) => {
+                              if (e.target === e.currentTarget) setPrevItem(null);
+                            }}
+                          >
+                            <Image
+                              src={it.src}
+                              alt={cur ? it.alt : ""}
+                              fill
+                              sizes={STAGE_SIZES}
+                              priority={cur && tab === "all" && index === 0}
+                              loading={cur ? undefined : "eager"}
+                              placeholder="blur"
+                              blurDataURL={BLUR_DATA_URL}
+                              style={{ objectPosition: it.position }}
+                              className="gx-img"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1045,7 +1108,7 @@ export default function Gallery() {
                     <span className="gx-eyebrow">
                       {item.category} · {pad(index + 1)} / {pad(total)}
                     </span>
-                    <strong>{item.caption}</strong>
+                    <strong key={item.src}>{item.caption}</strong>
                   </div>
 
                   {/* enquiry button: visible to everyone, not only in fullscreen */}
@@ -1248,53 +1311,43 @@ export default function Gallery() {
             onWheel={onWheel}
           >
             <div className="gx-v-track" ref={vTrackRef}>
-              {prevNb && (
-                <div className="gx-v-slide is-prev" aria-hidden="true">
-                  <Image
-                    src={prevNb.src}
-                    alt=""
-                    fill
-                    sizes="100vw"
-                    quality={90}
-                    loading="eager"
-                    draggable={false}
-                  />
-                </div>
-              )}
+              {slides.map(({ it, role }) => {
+                const cur = role === 0;
 
-              <div
-                className="gx-v-image"
-                style={{
-                  transform: `translate3d(${pos.x}px, ${pos.y}px, 0) scale(${scale})`,
-                  cursor: scale > 1 ? "grab" : "zoom-in",
-                }}
-              >
-                <Image
-                  key={item.src}
-                  src={item.src}
-                  alt={item.alt}
-                  fill
-                  sizes="100vw"
-                  quality={90}
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
-                  draggable={false}
-                />
-              </div>
-
-              {nextNb && (
-                <div className="gx-v-slide is-next" aria-hidden="true">
-                  <Image
-                    src={nextNb.src}
-                    alt=""
-                    fill
-                    sizes="100vw"
-                    quality={90}
-                    loading="eager"
-                    draggable={false}
-                  />
-                </div>
-              )}
+                return (
+                  <div
+                    key={it.src}
+                    className={`gx-v-slide ${
+                      cur ? "is-cur" : role < 0 ? "is-prev" : "is-next"
+                    }`}
+                    aria-hidden={cur ? undefined : true}
+                  >
+                    <div
+                      className="gx-v-image"
+                      style={
+                        cur
+                          ? {
+                              transform: `translate3d(${pos.x}px, ${pos.y}px, 0) scale(${scale})`,
+                              cursor: scale > 1 ? "grab" : "zoom-in",
+                            }
+                          : undefined
+                      }
+                    >
+                      <Image
+                        src={it.src}
+                        alt={cur ? it.alt : ""}
+                        fill
+                        sizes="100vw"
+                        quality={90}
+                        loading={cur ? undefined : "eager"}
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        draggable={false}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

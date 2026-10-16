@@ -238,15 +238,19 @@
   will-change: transform;
 }
 
+/* Every photo is a "slide" that is created once and then only changes role
+   (previous / current / next) – so nothing is re-created while swiping. */
+.gx-slide,
 .gx-layer {
   position: absolute;
   inset: 0;
 }
 
-/* the photos waiting just off-screen, left and right */
 .gx-slide {
-  position: absolute;
-  inset: 0;
+  z-index: 2;
+
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .gx-slide.is-prev {
@@ -257,50 +261,29 @@
   transform: translate3d(100%, 0, 0);
 }
 
-.gx-slide .gx-img {
-  animation: none;
-  transform: scale(1.04);
-}
-
-.gx-layer.is-prev {
-  z-index: 1;
-}
-
-.gx-layer.is-current {
-  z-index: 2;
-
+/* only used when jumping to a photo that is not next to this one */
+.gx-slide.is-fade {
   animation: gxLayerIn 0.85s ease both;
 }
 
-/* after a swipe the photo is already visible, so no fade-in */
-.gx-layer.is-current.is-instant {
-  animation: none;
+/* the photo that is fading out underneath */
+.gx-layer {
+  z-index: 1;
 }
 
-/* the soft placeholder (next/image blurDataURL) shows while the photo
-   loads; the photo then sharpens into place */
 .gx-img {
   object-fit: cover;
 
-  filter: blur(10px);
+  transform: scale(1.04);
+}
 
-  transition: filter 0.9s ease;
-
+/* slow zoom only on the photo you are looking at */
+.gx-slide.is-cur .gx-img {
   animation: gxKen 10s ease-out both;
 }
 
-.gx-img.is-loaded {
-  filter: none;
-}
-
-.gx-layer.is-prev .gx-img {
-  animation: none;
-}
-
-/* hidden images that only exist to be downloaded early */
-.gx-preload {
-  opacity: 0;
-  pointer-events: none;
+.gx-layer .gx-img {
+  transform: scale(1.08);
 }
 
 .gx-shade {
@@ -968,16 +951,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gx-layer.is-current,
-  .gx-img,
+  .gx-slide.is-fade,
+  .gx-slide.is-cur .gx-img,
   .gx-caption strong,
   .gx-viewer {
     animation: none;
-  }
-
-  .gx-img {
-    filter: none;
-    transition: none;
   }
 
   .gx-tilt,
@@ -986,6 +964,24 @@
   .gx-cursor,
   .gx-v-image {
     transition: none;
+  }
+}
+
+/* backdrop blur is re-drawn every frame while a photo moves under it,
+   which makes text and buttons flicker on phones: use a solid tint instead */
+@media (hover: none) {
+  .gx-eyebrow,
+  .gx-btn {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .gx-eyebrow {
+    background: rgba(12, 28, 21, 0.5);
+  }
+
+  .gx-btn {
+    background: rgba(12, 28, 21, 0.42);
   }
 }
 
