@@ -665,13 +665,17 @@
   display: flex;
   flex-direction: column;
 
-  background: rgba(8, 18, 15, 0.97);
+  background: #050c09;
 
   animation: gxFade 0.25s ease;
 }
 
+/* the photo fills the whole screen; the bars float on top of it */
 .gx-v-top {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 3;
 
   display: flex;
@@ -679,7 +683,12 @@
   justify-content: space-between;
   gap: 16px;
 
-  padding: 16px 22px;
+  padding: calc(16px + env(safe-area-inset-top)) 22px 34px;
+
+  background: linear-gradient(to bottom, rgba(5, 12, 9, 0.7), transparent);
+
+  /* clicks and swipes pass through to the photo; only the buttons catch them */
+  pointer-events: none;
 }
 
 .gx-v-title {
@@ -711,6 +720,8 @@
   gap: 8px;
 
   flex-shrink: 0;
+
+  pointer-events: auto;
 }
 
 .gx-v-btn {
@@ -753,14 +764,11 @@
 }
 
 .gx-v-stage {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
 
-  flex: 1;
-
-  min-height: 0;
-
-  margin: 0 70px;
+  margin: 0;
 
   overflow: hidden;
 
@@ -826,7 +834,10 @@
 }
 
 .gx-v-bottom {
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 3;
 
   display: flex;
@@ -834,7 +845,15 @@
   align-items: center;
   gap: 10px;
 
-  padding: 14px 22px 20px;
+  padding: 34px 22px calc(20px + env(safe-area-inset-bottom));
+
+  background: linear-gradient(to top, rgba(5, 12, 9, 0.7), transparent);
+
+  pointer-events: none;
+}
+
+.gx-v-bottom .gx-enquire {
+  pointer-events: auto;
 }
 
 /* ---------- WhatsApp enquiry button ---------- */
@@ -1135,7 +1154,7 @@
   /* viewer */
 
   .gx-v-top {
-    padding: 12px 14px;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 30px;
   }
 
   .gx-v-title strong {
@@ -1150,10 +1169,6 @@
   /* pinch replaces the zoom buttons */
   .gx-v-zoom {
     display: none;
-  }
-
-  .gx-v-stage {
-    margin: 0;
   }
 
   .gx-v-arrow {
@@ -1175,7 +1190,7 @@
   }
 
   .gx-v-bottom {
-    padding: 10px 14px 18px;
+    padding: 30px 14px calc(18px + env(safe-area-inset-bottom));
   }
 
   .gx-v-bottom .gx-enquire {

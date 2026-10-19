@@ -169,13 +169,16 @@ function ArrowIcon() {
   );
 }
 
-/* ---------- numbers count up once, shortly after the page loads ---------- */
+/* ---------- numbers count up once, shortly after the page loads ----------
+   - duration: how long the counting takes (ms) – bigger = slower
+   - while counting, the number grows (see .hero-count.is-counting in
+     Hero.css) and then eases back to its normal size                      */
 
 function CountUp({
   end,
   suffix = "",
   delay = 1300,
-  duration = 1600,
+  duration = 3200,
 }: {
   end: number;
   suffix?: string;
@@ -183,6 +186,7 @@ function CountUp({
   duration?: number;
 }) {
   const [value, setValue] = useState(end);
+  const [counting, setCounting] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -193,6 +197,8 @@ function CountUp({
     setValue(0);
 
     const timer = window.setTimeout(() => {
+      setCounting(true); /* numbers grow while counting */
+
       const tick = (now: number) => {
         if (!startTime) startTime = now;
 
@@ -201,7 +207,11 @@ function CountUp({
 
         setValue(Math.round(end * eased));
 
-        if (progress < 1) frame = requestAnimationFrame(tick);
+        if (progress < 1) {
+          frame = requestAnimationFrame(tick);
+        } else {
+          setCounting(false); /* and ease back to normal size */
+        }
       };
 
       frame = requestAnimationFrame(tick);
@@ -221,7 +231,10 @@ function CountUp({
         {suffix}
       </span>
 
-      <span aria-hidden="true">
+      <span
+        className={`hero-count ${counting ? "is-counting" : ""}`}
+        aria-hidden="true"
+      >
         {value}
         {suffix}
       </span>
@@ -411,8 +424,8 @@ export default function Hero() {
       {/* HERO CONTENT */}
       <div className="hero-content">
         <p className="hero-label">
-          Premium Residential &amp; Commercial Plots
-        </p>
+  Premium Residential &amp; Commercial Plots in Khargone
+</p>
 
         <h1>
           {["Life", "in", "the", "city"].map((word, index) => (

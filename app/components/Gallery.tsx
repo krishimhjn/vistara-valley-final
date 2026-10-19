@@ -419,11 +419,23 @@ export default function Gallery() {
     /* remember what had focus so we can give it back on close */
     lastFocus.current = document.activeElement as HTMLElement | null;
     setViewer(true);
+
+    /* ask the browser for real full screen (hides the address bar and tabs).
+       Some browsers (e.g. iPhone Safari) refuse – the photo still fills the
+       whole window in that case. Must be called straight from the click. */
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) {
+      root.requestFullscreen().catch(() => {});
+    }
   }, []);
 
   const closeViewer = useCallback(() => {
     setViewer(false);
     resetZoom();
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
 
     /* remove the photo link from the address bar */
     window.history.replaceState(
@@ -590,6 +602,20 @@ export default function Gallery() {
       document.body.style.overflow = "";
     };
   }, [viewer]);
+
+  /* leaving browser full screen (Esc, or the browser's own button)
+     also closes the viewer */
+  useEffect(() => {
+    if (!viewer) return;
+
+    const onChange = () => {
+      if (!document.fullscreenElement) closeViewer();
+    };
+
+    document.addEventListener("fullscreenchange", onChange);
+
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [viewer, closeViewer]);
 
   /* ---------- stage: hover tilt, "View" cursor, swipe ---------- */
 
